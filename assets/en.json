@@ -1,0 +1,47 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "close": "Close",
+    "loading": "Loading...",
+    "select_date": "Select Date",
+    "select_company": "Select Company",
+    "error": "Error",
+    "success": "Success",
+    "days": "days",
+    "search": "Search",
+    "update": "Update",
+    "next": "Next",
+    "previous": "Previous",
+    "back": "Back"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "verify_account": "Verify Account",
+    "verify_account_message": "Please verify your email address to login",
+    "send_verification_mail": "Send Verification Mail",
+    "i_forgot_password": "I forgot my password",
+    "welcome_message": "It's nice to see you among us.",
+    "no_account": "Don't you have an account?",
+    "sign_up": "Sign Up",
+    "errors": {
+      "email_required": "Please enter your email address",
+      "invalid_email": "Please enter a valid email address",
+      "verification_success": "Verification email sent successfully to your email {email}",
+      "verification_error": "Verification email could not be sent \n {error}",
+      "invalid_credentials": "Email or password incorrect",
+      "login_success": "Login Request Succeeded",
+      "verify_email": "Please verify your email address",
+      "user_disabled": "User is disabled",
+      "invalid_captcha": "Invalid captcha, try again",
+      "required_fields": "Please fill in the required fields",
+      "tfa_required": "TFA code is required"
+    }
+  }
+}

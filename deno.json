@@ -1,0 +1,27 @@
+{
+  "name": "@ibodev/glotto",
+  "version": "1.0.0",
+  "exports": "./cli.ts",
+  "lock": false,
+  "tasks": {
+    "cli": "deno run -A cli.ts",
+    "build": "deno compile -A -o glotto cli.ts",
+    "build:npm": "deno run -A scripts/build_npm.ts",
+    "publish": "deno publish",
+    "publish:npm": "npm publish",
+    "check": "deno check **/*.ts"
+  },
+  "fmt": {
+    "semiColons": true,
+    "singleQuote": true,
+    "lineWidth": 160
+  },
+  "imports": {
+    "@deno/dnt": "jsr:@deno/dnt@^0.41.3",
+    "@google/generative-ai": "npm:@google/generative-ai@^0.21.0",
+    "@std/cli": "jsr:@std/cli@^1",
+    "@std/encoding": "jsr:@std/encoding@^1.0.7",
+    "@std/path": "jsr:@std/path@^1",
+    "consola": "npm:consola@^3.4.0"
+  }
+}
