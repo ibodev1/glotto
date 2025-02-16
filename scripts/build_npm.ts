@@ -31,9 +31,6 @@ await build({
       'node': '>=20.0.0',
       'npm': '>=8.12.1',
     },
-    files: [
-      'npm',
-    ],
     main: 'esm/cli.js',
     types: 'esm/cli.d.ts',
     bin: {

@@ -12,8 +12,36 @@ translating your language files to any target language while maintaining the JSO
 
 ## Installation
 
+## Jsr
+
+Install globally with jsr;
+
 ```bash
-# Installation command (Add your package manager's installation command here)
+deno install --global --name glotto -A jsr:@ibodev/glotto
+```
+
+### Or
+
+Run locally;
+
+```bash
+deno run -A jsr:@ibodev/glotto
+```
+
+## Npm
+
+Install globally with npm;
+
+```bash
+npm install --global glotto
+```
+
+### Or
+
+Run locally;
+
+```bash
+npx glotto
 ```
 
 ## Usage
