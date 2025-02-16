@@ -27,15 +27,13 @@ await build({
     description: 'A tool for translating i18n JSON files using AI services.',
     author: 'Ibrahim Odev <developer.ibrahimodev@gmail.com>',
     license: 'MIT',
+    publishConfig: {
+      'access': 'public',
+    },
     engines: {
       'node': '>=20.0.0',
-      'npm': '>=8.12.1',
     },
-    main: 'esm/cli.js',
-    types: 'esm/cli.d.ts',
-    bin: {
-      glotto: 'esm/cli.js',
-    },
+    bin: './esm/cli.js',
     repository: {
       type: 'git',
       url: 'git+https://github.com/ibodev1/glotto.git',
@@ -46,9 +44,6 @@ await build({
     dependencies: {
       '@google/generative-ai': '^0.21.0',
       'consola': '^3.4.0',
-    },
-    devDependencies: {
-      '@types/node': '^16',
     },
   },
   postBuild() {

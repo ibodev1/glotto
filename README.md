@@ -12,33 +12,41 @@ translating your language files to any target language while maintaining the JSO
 
 ## Installation
 
-## Jsr
+Glotto can be installed and used through either JSR (Deno) or npm. Choose the method that best suits your development environment.
 
-Install globally with jsr;
+### [JSR (Deno)](https://jsr.io/@ibodev/glotto)
+
+#### Global Installation
+
+Install Glotto globally to use it as a CLI tool from anywhere:
 
 ```bash
 deno install --global --name glotto -A jsr:@ibodev/glotto
 ```
 
-### Or
+#### Direct Execution
 
-Run locally;
+Alternatively, run Glotto directly without installation:
 
 ```bash
 deno run -A jsr:@ibodev/glotto
 ```
 
-## Npm
+### [npm (Node)](https://www.npmjs.com/package/glotto)
 
-Install globally with npm;
+#### Global Installation
+
+Install Glotto globally via npm to use it as a CLI tool:
 
 ```bash
 npm install --global glotto
 ```
 
-### Or
+After installation, the `glotto` command will be available in your terminal.
 
-Run locally;
+#### Direct Execution
+
+Run Glotto directly using npx without installation:
 
 ```bash
 npx glotto
