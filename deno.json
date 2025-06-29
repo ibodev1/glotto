@@ -17,8 +17,8 @@
     "lineWidth": 160
   },
   "imports": {
-    "@deno/dnt": "jsr:@deno/dnt@^0.41.3",
-    "@google/generative-ai": "npm:@google/generative-ai@^0.21.0",
+    "@deno/dnt": "jsr:@deno/dnt@^0.42.1",
+    "@google/genai": "npm:@google/genai@^1.7.0",
     "@std/cli": "jsr:@std/cli@^1",
     "@std/encoding": "jsr:@std/encoding@^1.0.7",
     "@std/path": "jsr:@std/path@^1",

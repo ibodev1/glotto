@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, type Part } from '@google/generative-ai';
+import { GoogleGenAI, type Part } from '@google/genai';
 import { encodeBase64 } from '@std/encoding';
 import type { JsonObject, Translatable } from '../types.ts';
 import { generatePrompts, isValidJson } from '../utilites.ts';
@@ -12,33 +12,19 @@ class Gemini implements Translatable {
   fileContents: Uint8Array[];
   from: string;
   to: string;
-  genAI: GoogleGenerativeAI;
+  genAI: GoogleGenAI;
 
   constructor(key: string, fileContents: Uint8Array[], from: string, to: string) {
     this.fileContents = fileContents;
     this.from = from;
     this.to = to;
-    this.genAI = new GoogleGenerativeAI(key);
+    this.genAI = new GoogleGenAI({
+      apiKey: key,
+    });
   }
 
   async translate() {
     const { systemPrompt, userPrompt } = generatePrompts(this.from, this.to);
-
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: systemPrompt,
-      generationConfig: {
-        candidateCount: 1,
-        responseMimeType: 'application/json',
-        responseLogprobs: false,
-        temperature: 0.3,
-        topP: 0.7,
-        topK: 20,
-        presencePenalty: 0.2,
-        frequencyPenalty: 0.2,
-        maxOutputTokens: Number.POSITIVE_INFINITY,
-      },
-    });
 
     const results: string[] = [];
     let index = 0;
@@ -53,8 +39,25 @@ class Gemini implements Translatable {
         },
       };
 
-      const { response } = await model.generateContent([systemPrompt, userPrompt, part]);
-      const text = response.text();
+      const { text } = await this.genAI.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [systemPrompt, userPrompt, part],
+        config: {
+          systemInstruction: systemPrompt,
+          candidateCount: 1,
+          responseMimeType: 'application/json',
+          responseLogprobs: false,
+          temperature: 0.3,
+          topP: 0.7,
+          topK: 20,
+          maxOutputTokens: Number.POSITIVE_INFINITY,
+        },
+      });
+
+      if (!text) {
+        logger.error('No text returned from Gemini AI for file:', index + 1);
+        continue;
+      }
 
       const tempJsonFileName = `${this.to}_${index + 1}.json`;
       await writeTemp(tempJsonFileName, text);
