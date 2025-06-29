@@ -3,29 +3,29 @@ import denoJson from '../deno.json' with { type: 'json' };
 import { resolvePath } from '../src/file.ts';
 
 const CLI_DIR = resolvePath('./cli.ts');
-const NPM_dIR = resolvePath('./npm');
+const NPM_DIR = resolvePath('./npm');
 
 const LICENCE_DIR = resolvePath('./LICENSE');
 const README_DIR = resolvePath('./README.md');
 const NEW_LICENCE_DIR = resolvePath('./npm/LICENSE');
 const NEW_README_DIR = resolvePath('./npm/README.md');
 
-await emptyDir(NPM_dIR);
+await emptyDir(NPM_DIR);
 
 await build({
   entryPoints: [CLI_DIR],
-  outDir: NPM_dIR,
+  outDir: NPM_DIR,
   shims: {
     deno: true,
   },
   test: false,
   typeCheck: false,
-  importMap: 'deno.json',
+  packageManager: 'npm',
   package: {
     name: 'glotto',
     version: denoJson.version,
     description: 'A tool for translating i18n JSON files using AI services.',
-    author: 'Ibrahim Odev <developer.ibrahimodev@gmail.com>',
+    author: 'Ibrahim Odev <me@ibrahimo.dev>',
     license: 'MIT',
     publishConfig: {
       'access': 'public',
@@ -42,7 +42,7 @@ await build({
       url: 'https://github.com/ibodev1/glotto/issues',
     },
     dependencies: {
-      '@google/generative-ai': '^0.21.0',
+      '@google/genai': '^1.7.0',
       'consola': '^3.4.0',
     },
   },

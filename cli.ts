@@ -4,16 +4,16 @@ import { getImportJson, resolvePath, splitJson, writeOutput } from './src/file.t
 import { DEFAULT_MAX_KEYS, DEFAULT_MODULE, HELP_TEXT } from './src/contants.ts';
 import { validateArgs } from './src/utilites.ts';
 import { logger } from './src/logger.ts';
+import denoJson from './deno.json' with { type: 'json' };
 import Gemini from './src/models/gemini.ts';
 
-const spinner = new Spinner({ message: 'AI Thinks...' });
+const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 
 async function main() {
-  spinner.start();
   try {
     const args = parseArgs(Deno.args, {
       string: ['key', 'module', 'input', 'output', 'from', 'to', 'maxkeys'],
-      boolean: ['help'],
+      boolean: ['help', 'version'],
       alias: {
         module: 'm',
         input: 'i',
@@ -22,11 +22,19 @@ async function main() {
         to: 't',
         maxkeys: 'k',
         help: 'h',
+        version: 'v',
       },
       default: { module: DEFAULT_MODULE, maxkeys: DEFAULT_MAX_KEYS },
     });
 
     const help = args.help || Deno.args.length === 0;
+    const version = args.version;
+
+    if (version) {
+      const VERSION = denoJson.version;
+      logger.info('Glotto version: ' + VERSION);
+      Deno.exit(0);
+    }
 
     if (help) {
       logger.box(HELP_TEXT);
@@ -53,6 +61,8 @@ async function main() {
     logger.info('From: ', validatedArgs.from);
     logger.info('To: ', validatedArgs.to);
     logger.info('Max Keys: ', validatedArgs.maxkeys);
+
+    spinner.start();
 
     let result = '';
 
