@@ -63,25 +63,25 @@ glotto --key <gemini-api-key> -i en.json -o ar.json -f English -t Arabic
 ### Use OpenAI instead of Gemini
 
 ```bash
-glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m openai
+glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p openai
 ```
 
 Optional custom OpenAI base URL:
 
 ```bash
-glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m openai --url=https://api.openai.com/v1
+glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p openai --url=https://api.openai.com/v1
 ```
 
 ### Use Anthropic (Claude)
 
 ```bash
-glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m anthropic
+glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p anthropic
 ```
 
 Optional custom Anthropic base URL:
 
 ```bash
-glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m anthropic --url=https://api.anthropic.com
+glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p anthropic --url=https://api.anthropic.com
 ```
 
 ### Parameters
@@ -91,7 +91,7 @@ glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English
 - `--output` or `-o`: Target JSON file
 - `--from` or `-f`: Source language
 - `--to` or `-t`: Target language
-- `--module` or `-m`: AI module (`gemini` | `openai` | `anthropic`, default: `gemini`)
+- `--provider` or `-p`: AI provider (`gemini` | `openai` | `anthropic`, default: `gemini`)
 - `--url`: Custom base URL for OpenAI/Anthropic (optional)
 
 ## Development
@@ -99,7 +99,7 @@ glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English
 To run the project in development mode:
 
 ```bash
-deno task cli --key <gemini-or-openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m gemini
+deno task cli --key <gemini-or-openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p gemini
 ```
 
 ### Building the Project

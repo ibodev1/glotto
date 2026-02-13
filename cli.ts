@@ -1,7 +1,7 @@
 import { Spinner } from '@std/cli/unstable-spinner';
 import { parseArgs } from '@std/cli';
 import { getImportJson, resolvePath, splitJson, writeOutput } from './src/file.ts';
-import { DEFAULT_MODULE, HELP_TEXT } from './src/contants.ts';
+import { DEFAULT_PROVIDER, HELP_TEXT } from './src/contants.ts';
 import { formatBytes, validateArgs } from './src/utilites.ts';
 import { logger } from './src/logger.ts';
 import denoJson from './deno.json' with { type: 'json' };
@@ -14,10 +14,10 @@ const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 async function main() {
   try {
     const args = parseArgs(Deno.args, {
-      string: ['key', 'module', 'input', 'output', 'from', 'to', 'url'],
+      string: ['key', 'provider', 'input', 'output', 'from', 'to', 'url'],
       boolean: ['help', 'version'],
       alias: {
-        module: 'm',
+        provider: 'p',
         input: 'i',
         output: 'o',
         from: 'f',
@@ -26,7 +26,7 @@ async function main() {
         help: 'h',
         version: 'v',
       },
-      default: { module: DEFAULT_MODULE },
+      default: { provider: DEFAULT_PROVIDER },
     });
 
     const help = args.help || Deno.args.length === 0;
@@ -54,7 +54,7 @@ async function main() {
 
     const outputPath = resolvePath(validatedArgs.output);
 
-    logger.info('Module: ', validatedArgs.module);
+    logger.info('Provider: ', validatedArgs.provider);
     logger.info('Input: ', validatedArgs.input);
     logger.info('Output: ', validatedArgs.output);
     logger.info('From: ', validatedArgs.from);
@@ -72,7 +72,7 @@ async function main() {
 
     let result = '';
 
-    switch (validatedArgs.module) {
+    switch (validatedArgs.provider) {
       case 'gemini': {
         const gemini = new Gemini(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to);
         result = await gemini.translate();
@@ -89,7 +89,7 @@ async function main() {
         break;
       }
       default: {
-        logger.warn('Module not found');
+        logger.warn('Provider not found');
         break;
       }
     }

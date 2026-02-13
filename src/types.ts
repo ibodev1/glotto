@@ -1,8 +1,8 @@
-export type Module = 'gemini' | 'openai' | 'anthropic';
+export type Provider = 'gemini' | 'openai' | 'anthropic';
 
 export type TranslateArgs = {
   key?: string;
-  module?: string;
+  provider?: string;
   input?: string;
   output?: string;
   from?: string;
@@ -12,7 +12,7 @@ export type TranslateArgs = {
 
 export type ValidatedTranslateArgs = {
   key: string;
-  module: Module;
+  provider: Provider;
   input: string;
   output: string;
   from: string;

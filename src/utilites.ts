@@ -1,4 +1,4 @@
-import type { Module, TranslateArgs, ValidatedTranslateArgs } from './types.ts';
+import type { Provider, TranslateArgs, ValidatedTranslateArgs } from './types.ts';
 import type { Args } from '@std/cli';
 
 export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs => {
@@ -6,8 +6,8 @@ export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs 
     throw new Error('AI Key is required');
   }
 
-  if (!args.module) {
-    throw new Error('Module parameter is required');
+  if (!args.provider) {
+    throw new Error('Provider parameter is required');
   }
 
   if (!args.input) {
@@ -28,7 +28,7 @@ export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs 
 
   return {
     key: args.key,
-    module: args.module as Module,
+    provider: args.provider as Provider,
     input: args.input,
     output: args.output,
     from: args.from,
