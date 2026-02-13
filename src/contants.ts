@@ -22,7 +22,7 @@ Options:
   -o, --output   Path to target JSON file (required)
   -f, --from     Source language (required)
   -t, --to       Target language (required)
-  --url          Custom base URL for OpenAI (optional)
+  --url          Custom base URL for OpenAI/Anthropic (optional)
   -h, --help     Display this help message
   -v, --version  Display version
 
@@ -30,6 +30,7 @@ Examples:
   glotto --key {{key}} --input=en.json --output=tr.json --from=english --to=turkish
   glotto --key {{key}} -i en.json -o tr.json -f english -t turkish -m gemini
   glotto --key {{key}} -i en.json -o tr.json -f english -t turkish -m openai
+  glotto --key {{key}} -i en.json -o tr.json -f english -t turkish -m anthropic
 `;
 
 export const TEMP_DIR = './tmp/';

@@ -18,6 +18,7 @@
     "lineWidth": 160
   },
   "imports": {
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.74.0",
     "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
     "@google/genai": "npm:@google/genai@^1.41.0",
     "@openai/openai": "jsr:@openai/openai@^6.21.0",

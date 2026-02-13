@@ -47,6 +47,8 @@ await build({
     },
     dependencies: {
       '@google/genai': '^1.41.0',
+      '@openai/openai': '^6.21.0',
+      '@anthropic-ai/sdk': '^0.74.0',
       'consola': '^3.4.2',
     },
   },

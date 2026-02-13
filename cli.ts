@@ -7,6 +7,7 @@ import { logger } from './src/logger.ts';
 import denoJson from './deno.json' with { type: 'json' };
 import Gemini from './src/models/gemini.ts';
 import OpenAIModel from './src/models/openai.ts';
+import AnthropicModel from './src/models/anthropic.ts';
 
 const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 
@@ -80,6 +81,11 @@ async function main() {
       case 'openai': {
         const openai = new OpenAIModel(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to, validatedArgs.url);
         result = await openai.translate();
+        break;
+      }
+      case 'anthropic': {
+        const anthropic = new AnthropicModel(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to, validatedArgs.url);
+        result = await anthropic.translate();
         break;
       }
       default: {

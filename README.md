@@ -72,6 +72,18 @@ Optional custom OpenAI base URL:
 glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m openai --url=https://api.openai.com/v1
 ```
 
+### Use Anthropic (Claude)
+
+```bash
+glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m anthropic
+```
+
+Optional custom Anthropic base URL:
+
+```bash
+glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m anthropic --url=https://api.anthropic.com
+```
+
 ### Parameters
 
 - `--key`: API key for the selected AI provider
@@ -79,8 +91,8 @@ glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --
 - `--output` or `-o`: Target JSON file
 - `--from` or `-f`: Source language
 - `--to` or `-t`: Target language
-- `--module` or `-m`: AI module (`gemini` | `openai`, default: `gemini`)
-- `--url`: Custom base URL for OpenAI (optional)
+- `--module` or `-m`: AI module (`gemini` | `openai` | `anthropic`, default: `gemini`)
+- `--url`: Custom base URL for OpenAI/Anthropic (optional)
 
 ## Development
 
@@ -104,4 +116,4 @@ Contributions are welcome! Feel free to submit issues and pull requests.
 
 ## License
 
-MIT Licence @ 2025
+MIT Licence @ 2026

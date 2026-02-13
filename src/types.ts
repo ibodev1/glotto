@@ -1,4 +1,4 @@
-export type Module = 'gemini' | 'openai';
+export type Module = 'gemini' | 'openai' | 'anthropic';
 
 export type TranslateArgs = {
   key?: string;
