@@ -3,6 +3,7 @@ export type Provider = 'gemini' | 'openai' | 'anthropic';
 export type TranslateArgs = {
   key?: string;
   provider?: string;
+  model?: string;
   input?: string;
   output?: string;
   from?: string;
@@ -13,6 +14,7 @@ export type TranslateArgs = {
 export type ValidatedTranslateArgs = {
   key: string;
   provider: Provider;
+  model?: string;
   input: string;
   output: string;
   from: string;

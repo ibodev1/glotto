@@ -3,7 +3,7 @@ import type { ChunkInfo, JsonObject, Translatable } from '../types.ts';
 import { delay, formatBytes, generatePrompts, isValidJson } from '../utilites.ts';
 import { logger } from '../logger.ts';
 import { mergeInputs, writeTemp } from '../file.ts';
-import { BASE_RETRY_DELAY_MS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
+import { BASE_RETRY_DELAY_MS, DEFAULT_MODELS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
 
 const decoder = new TextDecoder();
 
@@ -12,11 +12,13 @@ class AnthropicModel implements Translatable {
   from: string;
   to: string;
   client: Anthropic;
+  model: string;
 
-  constructor(key: string, chunks: ChunkInfo[], from: string, to: string, baseUrl?: string) {
+  constructor(key: string, chunks: ChunkInfo[], from: string, to: string, baseUrl?: string, modelName?: string) {
     this.chunks = chunks;
     this.from = from;
     this.to = to;
+    this.model = modelName ?? DEFAULT_MODELS.anthropic;
     this.client = new Anthropic({
       apiKey: key,
       baseURL: baseUrl,
@@ -36,7 +38,7 @@ class AnthropicModel implements Translatable {
         }
 
         const message = await this.client.messages.create({
-          model: 'claude-opus-4-6',
+          model: this.model,
           max_tokens: 4096,
           messages: [
             {

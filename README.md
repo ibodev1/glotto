@@ -84,6 +84,12 @@ Optional custom Anthropic base URL:
 glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p anthropic --url=https://api.anthropic.com
 ```
 
+Override default model for a provider:
+
+```bash
+glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p openai -m gpt-4.1
+```
+
 ### Parameters
 
 - `--key`: API key for the selected AI provider
@@ -92,6 +98,7 @@ glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English
 - `--from` or `-f`: Source language
 - `--to` or `-t`: Target language
 - `--provider` or `-p`: AI provider (`gemini` | `openai` | `anthropic`, default: `gemini`)
+- `--model` or `-m`: Model name for the selected provider (defaults: `gemini-2.5-flash`, `gpt-4.1-mini`, `claude-3-5-haiku-latest`)
 - `--url`: Custom base URL for OpenAI/Anthropic (optional)
 
 ## Development

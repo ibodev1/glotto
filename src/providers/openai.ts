@@ -3,7 +3,7 @@ import type { ChunkInfo, JsonObject, Translatable } from '../types.ts';
 import { delay, formatBytes, generatePrompts, isValidJson } from '../utilites.ts';
 import { logger } from '../logger.ts';
 import { mergeInputs, writeTemp } from '../file.ts';
-import { BASE_RETRY_DELAY_MS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
+import { BASE_RETRY_DELAY_MS, DEFAULT_MODELS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
 
 const decoder = new TextDecoder();
 
@@ -12,11 +12,13 @@ class OpenAIModel implements Translatable {
   from: string;
   to: string;
   client: OpenAI;
+  model: string;
 
-  constructor(key: string, chunks: ChunkInfo[], from: string, to: string, baseUrl?: string) {
+  constructor(key: string, chunks: ChunkInfo[], from: string, to: string, baseUrl?: string, modelName?: string) {
     this.chunks = chunks;
     this.from = from;
     this.to = to;
+    this.model = modelName ?? DEFAULT_MODELS.openai;
     this.client = new OpenAI({
       apiKey: key,
       baseURL: baseUrl,
@@ -36,7 +38,7 @@ class OpenAIModel implements Translatable {
         }
 
         const response = await this.client.responses.create({
-          model: 'gpt-4.1-mini',
+          model: this.model,
           input: [
             {
               role: 'user',

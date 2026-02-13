@@ -29,6 +29,7 @@ export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs 
   return {
     key: args.key,
     provider: args.provider as Provider,
+    model: args.model,
     input: args.input,
     output: args.output,
     from: args.from,

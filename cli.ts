@@ -14,10 +14,11 @@ const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 async function main() {
   try {
     const args = parseArgs(Deno.args, {
-      string: ['key', 'provider', 'input', 'output', 'from', 'to', 'url'],
+      string: ['key', 'provider', 'model', 'input', 'output', 'from', 'to', 'url'],
       boolean: ['help', 'version'],
       alias: {
         provider: 'p',
+        model: 'm',
         input: 'i',
         output: 'o',
         from: 'f',
@@ -59,6 +60,9 @@ async function main() {
     logger.info('Output: ', validatedArgs.output);
     logger.info('From: ', validatedArgs.from);
     logger.info('To: ', validatedArgs.to);
+    if (validatedArgs.model) {
+      logger.info('Model: ', validatedArgs.model);
+    }
     if (validatedArgs.url) {
       logger.info('URL: ', validatedArgs.url);
     }
@@ -74,17 +78,31 @@ async function main() {
 
     switch (validatedArgs.provider) {
       case 'gemini': {
-        const gemini = new Gemini(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to);
+        const gemini = new Gemini(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to, validatedArgs.model);
         result = await gemini.translate();
         break;
       }
       case 'openai': {
-        const openai = new OpenAIModel(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to, validatedArgs.url);
+        const openai = new OpenAIModel(
+          validatedArgs.key,
+          chunks,
+          validatedArgs.from,
+          validatedArgs.to,
+          validatedArgs.url,
+          validatedArgs.model,
+        );
         result = await openai.translate();
         break;
       }
       case 'anthropic': {
-        const anthropic = new AnthropicModel(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to, validatedArgs.url);
+        const anthropic = new AnthropicModel(
+          validatedArgs.key,
+          chunks,
+          validatedArgs.from,
+          validatedArgs.to,
+          validatedArgs.url,
+          validatedArgs.model,
+        );
         result = await anthropic.translate();
         break;
       }

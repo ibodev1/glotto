@@ -4,18 +4,20 @@ import type { ChunkInfo, JsonObject, Translatable } from '../types.ts';
 import { delay, formatBytes, generatePrompts, isValidJson } from '../utilites.ts';
 import { logger } from '../logger.ts';
 import { mergeInputs, writeTemp } from '../file.ts';
-import { BASE_RETRY_DELAY_MS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
+import { BASE_RETRY_DELAY_MS, DEFAULT_MODELS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
 
 class Gemini implements Translatable {
   chunks: ChunkInfo[];
   from: string;
   to: string;
   genAI: GoogleGenAI;
+  model: string;
 
-  constructor(key: string, chunks: ChunkInfo[], from: string, to: string) {
+  constructor(key: string, chunks: ChunkInfo[], from: string, to: string, modelName?: string) {
     this.chunks = chunks;
     this.from = from;
     this.to = to;
+    this.model = modelName ?? DEFAULT_MODELS.gemini;
     this.genAI = new GoogleGenAI({
       apiKey: key,
     });
@@ -42,7 +44,7 @@ class Gemini implements Translatable {
         };
 
         const { text } = await this.genAI.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: this.model,
           contents: [systemPrompt, userPrompt, part],
           config: {
             systemInstruction: systemPrompt,

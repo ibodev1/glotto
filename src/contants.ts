@@ -2,6 +2,12 @@ import type { Provider } from './types.ts';
 
 export const DEFAULT_PROVIDER: Provider = 'gemini';
 
+export const DEFAULT_MODELS: Record<Provider, string> = {
+  gemini: 'gemini-2.5-flash',
+  openai: 'gpt-4.1-mini',
+  anthropic: 'claude-3-5-haiku-latest',
+};
+
 export const DEFAULT_MAX_CHUNK_BYTES = 30_000 as const;
 
 export const MAX_RETRIES = 3 as const;
@@ -18,6 +24,7 @@ A tool for translating i18n JSON files using AI services.
 Options:
   --key          API key for the AI service (required)
   -p, --provider AI translation provider to use (default: ${DEFAULT_PROVIDER})
+  -m, --model    Model name for the selected provider (optional)
   -i, --input    Path to source JSON file (required)
   -o, --output   Path to target JSON file (required)
   -f, --from     Source language (required)
