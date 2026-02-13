@@ -6,15 +6,6 @@ import { logger } from '../logger.ts';
 import { mergeInputs, writeTemp } from '../file.ts';
 import { BASE_RETRY_DELAY_MS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
 
-/**
- * Gemini AI Translation Module
- *
- * Handles translation of JSON chunks through Google's Gemini API with:
- * - Automatic retry with exponential backoff on transient failures
- * - Inter-chunk delay to respect API rate limits
- * - Detailed progress logging per chunk
- * - Temporary file caching for recovery
- */
 class Gemini implements Translatable {
   chunks: ChunkInfo[];
   from: string;
@@ -30,13 +21,6 @@ class Gemini implements Translatable {
     });
   }
 
-  /**
-   * Translates a single chunk with retry logic and exponential backoff.
-   * @param chunk - The chunk to translate
-   * @param systemPrompt - System instructions for the AI
-   * @param userPrompt - User instructions for the AI
-   * @returns The translated JSON string, or null if all retries failed
-   */
   private async translateChunk(chunk: ChunkInfo, systemPrompt: string, userPrompt: string): Promise<string | null> {
     const chunkLabel = `[Chunk ${chunk.index + 1}/${this.chunks.length}]`;
 
@@ -77,7 +61,6 @@ class Gemini implements Translatable {
           continue;
         }
 
-        // Cache the raw response to a temp file for debugging/recovery
         const tempJsonFileName = `${this.to}_chunk_${chunk.index + 1}.json`;
         await writeTemp(tempJsonFileName, text);
 
@@ -104,14 +87,6 @@ class Gemini implements Translatable {
     return null;
   }
 
-  /**
-   * Orchestrates the translation of all chunks sequentially.
-   * Applies inter-chunk delays to avoid rate limiting.
-   * Merges all translated chunks into a single JSON output.
-   *
-   * @returns Formatted JSON string of the merged translation
-   * @throws Error if any chunk fails to translate after all retries
-   */
   async translate(): Promise<string> {
     const { systemPrompt, userPrompt } = generatePrompts(this.from, this.to);
     const totalChunks = this.chunks.length;
@@ -124,7 +99,6 @@ class Gemini implements Translatable {
     for (let i = 0; i < totalChunks; i++) {
       const chunk = this.chunks[i];
 
-      // Apply inter-chunk delay (skip before the first chunk)
       if (i > 0) {
         logger.info(`Waiting ${INTER_CHUNK_DELAY_MS}ms before next chunk (rate limit protection)...`);
         await delay(INTER_CHUNK_DELAY_MS);

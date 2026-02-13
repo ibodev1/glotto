@@ -1,12 +1,6 @@
 import type { Module, TranslateArgs, ValidatedTranslateArgs } from './types.ts';
 import type { Args } from '@std/cli';
 
-/**
- * Validates and processes command-line arguments
- * @param args - Raw arguments from CLI
- * @returns Processed and type-safe arguments
- * @throws Error if any required parameter is missing
- */
 export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs => {
   if (!args.key) {
     throw new Error('AI Key is required');
@@ -42,13 +36,6 @@ export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs 
   };
 };
 
-/**
- * Generates system and user prompts for AI translation
- * Creates detailed instructions for translating i18next JSON files
- * @param from - Source language for translation
- * @param to - Target language for translation
- * @returns Object containing system and user prompts
- */
 export const generatePrompts = (from: string, to: string) => {
   const systemPrompt =
     `You are a specialized i18next JSON translation expert. Your role is to translate content from ${from} to ${to} with these strict requirements:
@@ -110,11 +97,6 @@ export const generatePrompts = (from: string, to: string) => {
   return { systemPrompt, userPrompt };
 };
 
-/**
- * Validates whether a string represents valid JSON
- * @param value - String to validate as JSON
- * @returns Boolean indicating if the string is valid JSON
- */
 export const isValidJson = (value: string): boolean => {
   try {
     JSON.parse(value);
@@ -124,23 +106,12 @@ export const isValidJson = (value: string): boolean => {
   }
 };
 
-/**
- * Formats byte size into a human-readable string (B, KB, MB)
- * @param bytes - Number of bytes
- * @returns Formatted string representation
- */
 export const formatBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
 
-/**
- * Creates a promise that resolves after the specified delay.
- * Used for rate limiting between API calls and retry backoff.
- * @param ms - Delay in milliseconds
- * @returns Promise that resolves after the delay
- */
 export const delay = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };

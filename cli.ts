@@ -44,7 +44,6 @@ async function main() {
 
     const fileContent = await getImportJson(validatedArgs.input);
 
-    // Automatically split JSON into optimally-sized chunks
     const chunks = splitJson(fileContent);
 
     const totalBytes = chunks.reduce((sum, c) => sum + c.byteSize, 0);
