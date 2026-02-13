@@ -2,7 +2,6 @@ import { build, emptyDir } from '@deno/dnt';
 import denoJson from '../deno.json' with { type: 'json' };
 import { resolvePath } from '../src/file.ts';
 
-const CLI_DIR = resolvePath('./cli.ts');
 const NPM_DIR = resolvePath('./npm');
 
 const LICENCE_DIR = resolvePath('./LICENSE');
@@ -13,7 +12,13 @@ const NEW_README_DIR = resolvePath('./npm/README.md');
 await emptyDir(NPM_DIR);
 
 await build({
-  entryPoints: [CLI_DIR],
+  entryPoints: [
+    {
+      kind: 'bin',
+      name: 'glotto',
+      path: './cli.ts',
+    },
+  ],
   outDir: NPM_DIR,
   shims: {
     deno: true,
@@ -33,7 +38,6 @@ await build({
     engines: {
       'node': '>=20.0.0',
     },
-    bin: './esm/cli.js',
     repository: {
       type: 'git',
       url: 'git+https://github.com/ibodev1/glotto.git',
@@ -42,8 +46,8 @@ await build({
       url: 'https://github.com/ibodev1/glotto/issues',
     },
     dependencies: {
-      '@google/genai': '^1.7.0',
-      'consola': '^3.4.0',
+      '@google/genai': '^1.41.0',
+      'consola': '^3.4.2',
     },
   },
   postBuild() {

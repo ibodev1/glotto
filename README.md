@@ -59,13 +59,13 @@ You can use Glotto AI Translator in two ways:
 ### Basic Usage
 
 ```bash
-glotto --key <your-api-key> -i en.json -o ar.json -f English -t Arabic -k 4
+glotto --key <your-api-key> -i en.json -o ar.json -f English -t Arabic
 ```
 
 ### Extended Usage
 
 ```bash
-glotto --key <your-api-key> --input=en.json --output=tr.json --from=English --to=Turkish --maxkeys=10
+glotto --key <your-api-key> --input=en.json --output=tr.json --from=English --to=Turkish
 ```
 
 ### Parameters
@@ -75,14 +75,13 @@ glotto --key <your-api-key> --input=en.json --output=tr.json --from=English --to
 - `--output` or `-o`: Target JSON file
 - `--from` or `-f`: Source language
 - `--to` or `-t`: Target language
-- `--maxkeys` or `-k`: Maximum number of keys to process in each batch
 
 ## Development
 
 To run the project in development mode:
 
 ```bash
-deno task cli --key <your-api-key> --input=en.json --output=tr.json --from=English --to=Turkish --maxkeys=10
+deno task cli --key <your-api-key> --input=en.json --output=tr.json --from=English --to=Turkish
 ```
 
 ### Building the Project
