@@ -22,6 +22,7 @@ Options:
   -o, --output   Path to target JSON file (required)
   -f, --from     Source language (required)
   -t, --to       Target language (required)
+  --url          Custom base URL for OpenAI (optional)
   -h, --help     Display this help message
   -v, --version  Display version
 

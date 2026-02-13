@@ -13,7 +13,7 @@ const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 async function main() {
   try {
     const args = parseArgs(Deno.args, {
-      string: ['key', 'module', 'input', 'output', 'from', 'to'],
+      string: ['key', 'module', 'input', 'output', 'from', 'to', 'url'],
       boolean: ['help', 'version'],
       alias: {
         module: 'm',
@@ -21,6 +21,7 @@ async function main() {
         output: 'o',
         from: 'f',
         to: 't',
+        url: 'u',
         help: 'h',
         version: 'v',
       },
@@ -57,6 +58,9 @@ async function main() {
     logger.info('Output: ', validatedArgs.output);
     logger.info('From: ', validatedArgs.from);
     logger.info('To: ', validatedArgs.to);
+    if (validatedArgs.url) {
+      logger.info('URL: ', validatedArgs.url);
+    }
     logger.info(`Total: ${totalKeys} keys, ${formatBytes(totalBytes)}, split into ${chunks.length} chunk(s)`);
 
     for (const chunk of chunks) {
@@ -74,7 +78,7 @@ async function main() {
         break;
       }
       case 'openai': {
-        const openai = new OpenAIModel(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to);
+        const openai = new OpenAIModel(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to, validatedArgs.url);
         result = await openai.translate();
         break;
       }

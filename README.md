@@ -66,6 +66,12 @@ glotto --key <gemini-api-key> -i en.json -o ar.json -f English -t Arabic
 glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m openai
 ```
 
+Optional custom OpenAI base URL:
+
+```bash
+glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m openai --url=https://api.openai.com/v1
+```
+
 ### Parameters
 
 - `--key`: API key for the selected AI provider
@@ -74,6 +80,7 @@ glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --
 - `--from` or `-f`: Source language
 - `--to` or `-t`: Target language
 - `--module` or `-m`: AI module (`gemini` | `openai`, default: `gemini`)
+- `--url`: Custom base URL for OpenAI (optional)
 
 ## Development
 

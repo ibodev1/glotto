@@ -13,11 +13,14 @@ class OpenAIModel implements Translatable {
   to: string;
   client: OpenAI;
 
-  constructor(key: string, chunks: ChunkInfo[], from: string, to: string) {
+  constructor(key: string, chunks: ChunkInfo[], from: string, to: string, baseUrl?: string) {
     this.chunks = chunks;
     this.from = from;
     this.to = to;
-    this.client = new OpenAI({ apiKey: key });
+    this.client = new OpenAI({
+      apiKey: key,
+      baseURL: baseUrl,
+    });
   }
 
   private async translateChunk(chunk: ChunkInfo, systemPrompt: string, userPrompt: string): Promise<string | null> {

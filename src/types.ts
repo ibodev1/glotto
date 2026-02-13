@@ -7,6 +7,7 @@ export type TranslateArgs = {
   output?: string;
   from?: string;
   to?: string;
+  url?: string;
 };
 
 export type ValidatedTranslateArgs = {
@@ -16,6 +17,7 @@ export type ValidatedTranslateArgs = {
   output: string;
   from: string;
   to: string;
+  url?: string;
 };
 
 export interface Translatable {

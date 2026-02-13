@@ -33,6 +33,7 @@ export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs 
     output: args.output,
     from: args.from,
     to: args.to,
+    url: args.url,
   };
 };
 
