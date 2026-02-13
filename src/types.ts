@@ -1,4 +1,4 @@
-export type Module = 'gemini';
+export type Module = 'gemini' | 'openai';
 
 export type TranslateArgs = {
   key?: string;

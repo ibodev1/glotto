@@ -6,6 +6,7 @@ import { formatBytes, validateArgs } from './src/utilites.ts';
 import { logger } from './src/logger.ts';
 import denoJson from './deno.json' with { type: 'json' };
 import Gemini from './src/models/gemini.ts';
+import OpenAIModel from './src/models/openai.ts';
 
 const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 
@@ -70,6 +71,11 @@ async function main() {
       case 'gemini': {
         const gemini = new Gemini(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to);
         result = await gemini.translate();
+        break;
+      }
+      case 'openai': {
+        const openai = new OpenAIModel(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to);
+        result = await openai.translate();
         break;
       }
       default: {

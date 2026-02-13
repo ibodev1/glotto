@@ -54,34 +54,33 @@ npx glotto
 
 ## Usage
 
-You can use Glotto AI Translator in two ways:
-
-### Basic Usage
+### Basic usage (default Gemini)
 
 ```bash
-glotto --key <your-api-key> -i en.json -o ar.json -f English -t Arabic
+glotto --key <gemini-api-key> -i en.json -o ar.json -f English -t Arabic
 ```
 
-### Extended Usage
+### Use OpenAI instead of Gemini
 
 ```bash
-glotto --key <your-api-key> --input=en.json --output=tr.json --from=English --to=Turkish
+glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m openai
 ```
 
 ### Parameters
 
-- `--key`: Your API key for the translation service
+- `--key`: API key for the selected AI provider
 - `--input` or `-i`: Source JSON file
 - `--output` or `-o`: Target JSON file
 - `--from` or `-f`: Source language
 - `--to` or `-t`: Target language
+- `--module` or `-m`: AI module (`gemini` | `openai`, default: `gemini`)
 
 ## Development
 
 To run the project in development mode:
 
 ```bash
-deno task cli --key <your-api-key> --input=en.json --output=tr.json --from=English --to=Turkish
+deno task cli --key <gemini-or-openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -m gemini
 ```
 
 ### Building the Project

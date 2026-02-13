@@ -28,6 +28,7 @@ Options:
 Examples:
   glotto --key {{key}} --input=en.json --output=tr.json --from=english --to=turkish
   glotto --key {{key}} -i en.json -o tr.json -f english -t turkish -m gemini
+  glotto --key {{key}} -i en.json -o tr.json -f english -t turkish -m openai
 `;
 
 export const TEMP_DIR = './tmp/';
