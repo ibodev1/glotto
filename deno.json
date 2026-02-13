@@ -21,7 +21,7 @@
     "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.74.0",
     "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
     "@google/genai": "npm:@google/genai@^1.41.0",
-    "@openai/openai": "jsr:@openai/openai@^6.21.0",
+    "@openai/openai": "npm:openai@^4.77.3",
     "@std/cli": "jsr:@std/cli@^1.0.27",
     "@std/encoding": "jsr:@std/encoding@^1.0.10",
     "@std/path": "jsr:@std/path@^1.1.4",
