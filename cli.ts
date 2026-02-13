@@ -5,9 +5,9 @@ import { DEFAULT_PROVIDER, HELP_TEXT } from './src/contants.ts';
 import { formatBytes, validateArgs } from './src/utilites.ts';
 import { logger } from './src/logger.ts';
 import denoJson from './deno.json' with { type: 'json' };
-import Gemini from './src/models/gemini.ts';
-import OpenAIModel from './src/models/openai.ts';
-import AnthropicModel from './src/models/anthropic.ts';
+import Gemini from './src/providers/gemini.ts';
+import OpenAIModel from './src/providers/openai.ts';
+import AnthropicModel from './src/providers/anthropic.ts';
 
 const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 
