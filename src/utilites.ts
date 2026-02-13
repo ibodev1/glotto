@@ -39,7 +39,6 @@ export const validateArgs = (args: Args<TranslateArgs>): ValidatedTranslateArgs 
     output: args.output,
     from: args.from,
     to: args.to,
-    maxkeys: Number(args.maxkeys),
   };
 };
 
@@ -123,4 +122,25 @@ export const isValidJson = (value: string): boolean => {
   } catch {
     return false;
   }
+};
+
+/**
+ * Formats byte size into a human-readable string (B, KB, MB)
+ * @param bytes - Number of bytes
+ * @returns Formatted string representation
+ */
+export const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+/**
+ * Creates a promise that resolves after the specified delay.
+ * Used for rate limiting between API calls and retry backoff.
+ * @param ms - Delay in milliseconds
+ * @returns Promise that resolves after the delay
+ */
+export const delay = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };

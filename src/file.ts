@@ -1,5 +1,5 @@
 import { join } from '@std/path';
-import type { Chunk, JsonObject } from './types.ts';
+import type { Chunk, ChunkInfo, JsonObject } from './types.ts';
 import { TEMP_DIR } from './contants.ts';
 
 /**
@@ -70,35 +70,113 @@ export const ensureDirectoryExists = async (directory: string): Promise<void> =>
 };
 
 /**
- * Splits a JSON object into multiple chunks based on key count
- * @param data - Source JSON object to split
- * @param maxKeysPerFile - Maximum number of keys per chunk
- * @returns Set of encoded JSON chunks
+ * Calculates the byte size of a string using UTF-8 encoding.
+ * @param str - The string to measure
+ * @returns Byte size of the string
  */
-export const splitJson = (data: JsonObject, maxKeysPerFile: number): Set<Chunk> => {
+const getByteSize = (str: string): number => {
+  return new TextEncoder().encode(str).byteLength;
+};
+
+/**
+ * Builds a JSON object from a subset of keys and returns its serialized byte size.
+ * @param data - Source JSON object
+ * @param keys - Array of keys to include
+ * @returns The serialized JSON string and its byte size
+ */
+const buildChunkWithSize = (data: JsonObject, keys: string[]): { json: string; size: number } => {
+  const chunk: JsonObject = Object.create(null);
+  for (const key of keys) {
+    chunk[key] = data[key];
+  }
+  const json = JSON.stringify(chunk);
+  return { json, size: getByteSize(json) };
+};
+
+/**
+ * Intelligently splits a JSON object into optimally-sized chunks for LLM processing.
+ *
+ * Instead of requiring a manual `maxKeys` parameter, this algorithm:
+ * 1. Measures the total byte size of the serialized JSON
+ * 2. If it fits within the target chunk size, returns it as a single chunk
+ * 3. Otherwise, uses a greedy accumulation strategy to pack as many keys
+ *    as possible into each chunk without exceeding the byte limit
+ * 4. Handles edge cases where a single key's value exceeds the limit
+ *    by isolating it into its own chunk
+ *
+ * This ensures each chunk stays well within API request size limits
+ * and the model's context window, preventing rate limit and size limit errors.
+ *
+ * @param data - Source JSON object to split
+ * @param maxChunkBytes - Maximum byte size per chunk (default: 30KB, safe for most LLM APIs)
+ * @returns Array of ChunkInfo objects containing encoded data and metadata
+ */
+export const splitJson = (data: JsonObject, maxChunkBytes: number = 30_000): ChunkInfo[] => {
+  const encoder = new TextEncoder();
   const dataKeys = Object.keys(data);
   const totalKeys = dataKeys.length;
-  const numFiles = Math.ceil(totalKeys / maxKeysPerFile);
 
-  const files = new Set<Chunk>();
+  // If the entire object fits in a single chunk, return it directly
+  const fullJson = JSON.stringify(data);
+  const totalBytes = getByteSize(fullJson);
 
-  for (let i = 0; i < numFiles; i++) {
-    const startIdx = i * maxKeysPerFile;
-    const endIdx = Math.min((i + 1) * maxKeysPerFile, totalKeys);
-    const chunkKeys = dataKeys.slice(startIdx, endIdx);
-    const chunkObject: JsonObject = Object.create(null);
-
-    for (const key of chunkKeys) {
-      chunkObject[key] = data[key];
-    }
-
-    const chunkString = JSON.stringify(chunkObject);
-    const chunkArray = new TextEncoder().encode(chunkString);
-
-    files.add(chunkArray);
+  if (totalBytes <= maxChunkBytes) {
+    return [
+      {
+        data: encoder.encode(fullJson),
+        keyCount: totalKeys,
+        byteSize: totalBytes,
+        index: 0,
+      },
+    ];
   }
 
-  return files;
+  const chunks: ChunkInfo[] = [];
+  let currentKeys: string[] = [];
+  let currentSize = 2; // Starting with "{}" overhead
+
+  for (let i = 0; i < totalKeys; i++) {
+    const key = dataKeys[i];
+    const keyValueJson = JSON.stringify({ [key]: data[key] });
+    // Actual added size: the key-value content minus the wrapping braces,
+    // plus a comma separator if this is not the first key in the chunk
+    const entrySize = getByteSize(keyValueJson) - 2; // subtract "{" and "}"
+    const separatorSize = currentKeys.length > 0 ? 1 : 0; // comma
+
+    const projectedSize = currentSize + entrySize + separatorSize;
+
+    if (projectedSize > maxChunkBytes && currentKeys.length > 0) {
+      // Flush the current chunk
+      const { json, size } = buildChunkWithSize(data, currentKeys);
+      chunks.push({
+        data: encoder.encode(json),
+        keyCount: currentKeys.length,
+        byteSize: size,
+        index: chunks.length,
+      });
+
+      // Start a new chunk with the current key
+      currentKeys = [key];
+      currentSize = 2 + entrySize;
+    } else {
+      // Accumulate into current chunk
+      currentKeys.push(key);
+      currentSize = projectedSize;
+    }
+  }
+
+  // Flush the last remaining chunk
+  if (currentKeys.length > 0) {
+    const { json, size } = buildChunkWithSize(data, currentKeys);
+    chunks.push({
+      data: encoder.encode(json),
+      keyCount: currentKeys.length,
+      byteSize: size,
+      index: chunks.length,
+    });
+  }
+
+  return chunks;
 };
 
 /**

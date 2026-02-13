@@ -1,8 +1,8 @@
 import { Spinner } from '@std/cli/unstable-spinner';
 import { parseArgs } from '@std/cli';
 import { getImportJson, resolvePath, splitJson, writeOutput } from './src/file.ts';
-import { DEFAULT_MAX_KEYS, DEFAULT_MODULE, HELP_TEXT } from './src/contants.ts';
-import { validateArgs } from './src/utilites.ts';
+import { DEFAULT_MODULE, HELP_TEXT } from './src/contants.ts';
+import { formatBytes, validateArgs } from './src/utilites.ts';
 import { logger } from './src/logger.ts';
 import denoJson from './deno.json' with { type: 'json' };
 import Gemini from './src/models/gemini.ts';
@@ -12,7 +12,7 @@ const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 async function main() {
   try {
     const args = parseArgs(Deno.args, {
-      string: ['key', 'module', 'input', 'output', 'from', 'to', 'maxkeys'],
+      string: ['key', 'module', 'input', 'output', 'from', 'to'],
       boolean: ['help', 'version'],
       alias: {
         module: 'm',
@@ -20,11 +20,10 @@ async function main() {
         output: 'o',
         from: 'f',
         to: 't',
-        maxkeys: 'k',
         help: 'h',
         version: 'v',
       },
-      default: { module: DEFAULT_MODULE, maxkeys: DEFAULT_MAX_KEYS },
+      default: { module: DEFAULT_MODULE },
     });
 
     const help = args.help || Deno.args.length === 0;
@@ -43,15 +42,13 @@ async function main() {
 
     const validatedArgs = validateArgs(args);
 
-    const fileContents: Uint8Array[] = [];
-
     const fileContent = await getImportJson(validatedArgs.input);
 
-    const splittedFiles = splitJson(fileContent, validatedArgs.maxkeys);
+    // Automatically split JSON into optimally-sized chunks
+    const chunks = splitJson(fileContent);
 
-    for (const content of splittedFiles) {
-      fileContents.push(content);
-    }
+    const totalBytes = chunks.reduce((sum, c) => sum + c.byteSize, 0);
+    const totalKeys = chunks.reduce((sum, c) => sum + c.keyCount, 0);
 
     const outputPath = resolvePath(validatedArgs.output);
 
@@ -60,7 +57,11 @@ async function main() {
     logger.info('Output: ', validatedArgs.output);
     logger.info('From: ', validatedArgs.from);
     logger.info('To: ', validatedArgs.to);
-    logger.info('Max Keys: ', validatedArgs.maxkeys);
+    logger.info(`Total: ${totalKeys} keys, ${formatBytes(totalBytes)}, split into ${chunks.length} chunk(s)`);
+
+    for (const chunk of chunks) {
+      logger.info(`  Chunk ${chunk.index + 1}: ${chunk.keyCount} keys, ${formatBytes(chunk.byteSize)}`);
+    }
 
     spinner.start();
 
@@ -68,7 +69,7 @@ async function main() {
 
     switch (validatedArgs.module) {
       case 'gemini': {
-        const gemini = new Gemini(validatedArgs.key, fileContents, validatedArgs.from, validatedArgs.to);
+        const gemini = new Gemini(validatedArgs.key, chunks, validatedArgs.from, validatedArgs.to);
         result = await gemini.translate();
         break;
       }
@@ -84,6 +85,7 @@ async function main() {
 
     logger.success('Translation completed');
   } catch (error) {
+    spinner.stop();
     logger.error(error);
     Deno.exit(1);
   } finally {

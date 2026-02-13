@@ -3,6 +3,7 @@
   "version": "1.1.0",
   "exports": "./cli.ts",
   "lock": false,
+  "nodeModulesDir": "auto",
   "tasks": {
     "cli": "deno run -A cli.ts",
     "build": "deno compile -A -o glotto cli.ts",
@@ -17,11 +18,11 @@
     "lineWidth": 160
   },
   "imports": {
-    "@deno/dnt": "jsr:@deno/dnt@^0.42.1",
-    "@google/genai": "npm:@google/genai@^1.7.0",
-    "@std/cli": "jsr:@std/cli@^1",
-    "@std/encoding": "jsr:@std/encoding@^1.0.7",
-    "@std/path": "jsr:@std/path@^1",
-    "consola": "npm:consola@^3.4.0"
+    "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
+    "@google/genai": "npm:@google/genai@^1.41.0",
+    "@std/cli": "jsr:@std/cli@^1.0.27",
+    "@std/encoding": "jsr:@std/encoding@^1.0.10",
+    "@std/path": "jsr:@std/path@^1.1.4",
+    "consola": "npm:consola@^3.4.2"
   }
 }
