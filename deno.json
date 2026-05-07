@@ -23,7 +23,6 @@
     "@google/genai": "npm:@google/genai@^1.52.0",
     "@openai/openai": "npm:openai@^6.36.0",
     "@std/cli": "jsr:@std/cli@^1.0.29",
-    "@std/encoding": "jsr:@std/encoding@^1.0.10",
     "@std/path": "jsr:@std/path@^1.1.4",
     "consola": "npm:consola@^3.4.2"
   },

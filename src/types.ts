@@ -1,5 +1,10 @@
 export type Provider = 'gemini' | 'openai' | 'anthropic';
 
+export type TranslateOptions = {
+  noLimit: boolean;
+  noTimeout: boolean;
+};
+
 export type TranslateArgs = {
   key?: string;
   provider?: string;
@@ -9,6 +14,9 @@ export type TranslateArgs = {
   from?: string;
   to?: string;
   url?: string;
+  'no-limit'?: boolean;
+  'no-timeout'?: boolean;
+  'max-batch-size'?: string;
 };
 
 export type ValidatedTranslateArgs = {
@@ -20,25 +28,33 @@ export type ValidatedTranslateArgs = {
   from: string;
   to: string;
   url?: string;
+  noLimit: boolean;
+  noTimeout: boolean;
+  maxBatchBytes: number;
 };
 
-export interface Translatable {
-  chunks: ChunkInfo[];
-  from: string;
-  to: string;
-  translate(): Promise<string>;
+export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+export interface JsonObject {
+  [key: string]: JsonValue;
 }
+export type JsonArray = JsonValue[];
 
-export type JsonObject = Record<string, any>;
+export type PathSegment = string | number;
+export type Path = PathSegment[];
 
-export type Chunk = Uint8Array;
-
-export type ChunkInfo = {
-  data: Uint8Array;
-
-  keyCount: number;
-
-  byteSize: number;
-
-  index: number;
+export type Leaf = {
+  id: number;
+  path: Path;
+  value: JsonValue;
+  translatable: boolean;
 };
+
+export type Batch = {
+  index: number;
+  leaves: Leaf[];
+  byteSize: number;
+};
+
+export interface TextTranslator {
+  translate(prompt: string): Promise<string>;
+}

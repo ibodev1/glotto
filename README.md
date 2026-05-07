@@ -1,32 +1,42 @@
 # Glotto AI Translator
 
-Glotto is a powerful tool designed to translate i18n JSON files using advanced AI technology. It streamlines the localization process by automatically
-translating your language files to any target language while maintaining the JSON structure.
+Glotto translates i18n JSON files (i18next, react-intl, vue-i18n, etc.) using AI providers without forcing the model to produce JSON. It walks the input JSON,
+extracts every string leaf with its path, sends them to the model as plain-text tagged batches, and reconstructs the JSON from the responses. The original
+structure, keys, arrays, variables and HTML tags are preserved by Glotto itself — the model only sees and produces text.
 
-## Features
+## Why this approach
 
-- Translate JSON files while preserving the original structure
-- Support for multiple language pairs
-- Configurable batch processing with customizable key limits
-- Command-line interface for easy integration into your workflow
+- **Provider-agnostic**: works with Gemini, OpenAI/OpenAI-compatible (Ollama, vLLM, TogetherAI, etc.) and Anthropic. Every provider implements the same
+  `TextTranslator` contract: text in, text out.
+- **No JSON deadlock**: the model is never asked to emit valid JSON, so grammar-constrained sampling, broken responses and infinite loops on local models are
+  eliminated.
+- **Structure-safe**: keys, nesting, arrays and non-string leaves (numbers, booleans, null, empty objects/arrays) are preserved by reconstruction, not by the
+  model.
+- **Token efficient**: source size per request is bounded; failed entries are retried individually instead of re-sending the whole batch.
+- **Variable preservation**: the prompt instructs the model to keep `{{name}}`, `__VAR__`, `$t(...)`, `%s`, `%d`, HTML tags and markdown intact.
+
+## How it works
+
+1. **Extract** — recursively walk the JSON and collect every leaf as `{ id, path, value, translatable }`. Empty objects/arrays are kept as non-translatable
+   leaves so the structure is rebuildable.
+2. **Batch** — group translatable leaves into batches by source byte size (`--max-batch-size`, default 12 KB).
+3. **Encode** — wrap each entry as `≪id≫value≪/id≫` and send a single prompt per batch.
+4. **Translate** — call `provider.translate(prompt) → string`. No JSON mode is requested.
+5. **Decode** — parse the response with the same tag regex, mapping `id → translation`.
+6. **Reconstruct** — walk all leaves, place translated values (or original values for non-translatable leaves) back into a fresh object/array tree following the
+   recorded path, then write the resulting JSON.
+
+If a batch response is missing some IDs, only the missing entries are retried (with exponential backoff) — the successful ones are kept.
 
 ## Installation
 
-Glotto can be installed and used through either JSR (Deno) or npm. Choose the method that best suits your development environment.
-
 ### [JSR (Deno)](https://jsr.io/@ibodev/glotto)
-
-#### Global Installation
-
-Install Glotto globally to use it as a CLI tool from anywhere:
 
 ```bash
 deno install --global --name glotto -A jsr:@ibodev/glotto
 ```
 
-#### Direct Execution
-
-Alternatively, run Glotto directly without installation:
+Or run without installing:
 
 ```bash
 deno run -A jsr:@ibodev/glotto
@@ -34,19 +44,11 @@ deno run -A jsr:@ibodev/glotto
 
 ### [npm (Node)](https://www.npmjs.com/package/glotto)
 
-#### Global Installation
-
-Install Glotto globally via npm to use it as a CLI tool:
-
 ```bash
 npm install --global glotto
 ```
 
-After installation, the `glotto` command will be available in your terminal.
-
-#### Direct Execution
-
-Run Glotto directly using npx without installation:
+Or via npx:
 
 ```bash
 npx glotto
@@ -54,73 +56,102 @@ npx glotto
 
 ## Usage
 
-### Basic usage (default Gemini)
+### Basic (default Gemini)
 
 ```bash
 glotto --key <gemini-api-key> -i en.json -o ar.json -f English -t Arabic
 ```
 
-### Use OpenAI instead of Gemini
+### OpenAI / OpenAI-compatible (Ollama, vLLM, etc.)
 
 ```bash
-glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p openai
+glotto --key <openai-api-key> -i en.json -o tr.json -f English -t Turkish -p openai
 ```
 
-Optional custom OpenAI base URL:
+Custom base URL (e.g. local Ollama):
 
 ```bash
-glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p openai --url=https://api.openai.com/v1
+glotto --key any-string -i en.json -o tr.json -f English -t Turkish \
+  -p openai -m qwen2.5:32b --url http://localhost:11434/v1
 ```
 
-### Use Anthropic (Claude)
+### Anthropic (Claude)
 
 ```bash
-glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p anthropic
+glotto --key <anthropic-api-key> -i en.json -o tr.json -f English -t Turkish -p anthropic
 ```
 
-Optional custom Anthropic base URL:
+### Override the model
 
 ```bash
-glotto --key <anthropic-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p anthropic --url=https://api.anthropic.com
+glotto --key <openai-api-key> -i en.json -o tr.json -f English -t Turkish -p openai -m gpt-4.1
 ```
 
-Override default model for a provider:
+### Disable rate-limit delay and request timeout
 
 ```bash
-glotto --key <openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p openai -m gpt-4.1
+glotto --key <key> -i en.json -o tr.json -f English -t Turkish --no-limit --no-timeout
 ```
 
-### Parameters
+### Tune batch size
 
-- `--key`: API key for the selected AI provider
-- `--input` or `-i`: Source JSON file
-- `--output` or `-o`: Target JSON file
-- `--from` or `-f`: Source language
-- `--to` or `-t`: Target language
-- `--provider` or `-p`: AI provider (`gemini` | `openai` | `anthropic`, default: `gemini`)
-- `--model` or `-m`: Model name for the selected provider (defaults: `gemini-2.5-flash`, `gpt-4.1-mini`, `claude-3-5-haiku-latest`)
-- `--url`: Custom base URL for OpenAI/Anthropic (optional)
+`--max-batch-size` is the maximum source bytes per batch, in KB. Smaller batches mean more requests but lower per-request token cost; larger batches mean fewer
+requests.
+
+```bash
+glotto --key <key> -i en.json -o tr.json -f English -t Turkish --max-batch-size 8
+```
+
+## Parameters
+
+| Flag               | Description                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| `--key`            | API key for the chosen provider (required)                                           |
+| `-p`, `--provider` | `gemini` \| `openai` \| `anthropic` (default `gemini`)                               |
+| `-m`, `--model`    | Model name (defaults: `gemini-2.5-flash`, `gpt-4.1-mini`, `claude-3-5-haiku-latest`) |
+| `-i`, `--input`    | Source JSON file (required)                                                          |
+| `-o`, `--output`   | Target JSON file (required)                                                          |
+| `-f`, `--from`     | Source language                                                                      |
+| `-t`, `--to`       | Target language                                                                      |
+| `--url`            | Custom base URL for OpenAI/Anthropic                                                 |
+| `--no-limit`       | Skip the inter-batch rate-limit delay                                                |
+| `--no-timeout`     | Disable request timeout                                                              |
+| `--max-batch-size` | Max source bytes per batch in KB (default 12)                                        |
+| `-h`, `--help`     | Help                                                                                 |
+| `-v`, `--version`  | Version                                                                              |
+
+## Recommended models
+
+For high-quality multilingual output via OpenAI-compatible endpoints (Ollama, vLLM):
+
+- `aya-expanse:32b` — Cohere multilingual specialist, strong Turkish/Arabic/EU languages
+- `qwen2.5:32b` / `qwen2.5:14b` — strong general multilingual + instruction-following
+- `mistral-small3:24b` — lighter, ~13 GB at q4
+- `gemma3:27b-it` — Google instruction-tuned
+
+Pure translation-only models (e.g. translategemma) are not ideal here: the prompt asks the model to preserve tags and follow per-entry instructions, which
+requires instruction-following rather than a sentence-translation fine-tune.
 
 ## Development
 
-To run the project in development mode:
+Run from source:
 
 ```bash
-deno task cli --key <gemini-or-openai-api-key> --input=en.json --output=tr.json --from=English --to=Turkish -p gemini
+deno task cli --key <key> -i en.json -o tr.json -f English -t Turkish -p gemini
 ```
 
-### Building the Project
-
-To create a production build:
+Build a single-file binary:
 
 ```bash
 deno task build
 ```
 
-## Contributing
+Build npm package:
 
-Contributions are welcome! Feel free to submit issues and pull requests.
+```bash
+deno task build:npm
+```
 
 ## License
 
-MIT Licence @ 2026
+MIT © 2026
