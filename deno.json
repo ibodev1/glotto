@@ -1,6 +1,6 @@
 {
   "name": "@ibodev/glotto",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "exports": "./cli.ts",
   "lock": false,
   "nodeModulesDir": "auto",
