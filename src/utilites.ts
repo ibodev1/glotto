@@ -99,6 +99,65 @@ export const generatePrompts = (from: string, to: string) => {
   return { systemPrompt, userPrompt };
 };
 
+export const stripJsonMarkdown = (text: string): string => {
+  const trimmed = text.trim();
+
+  // Extract from code fence if present (handles surrounding text too)
+  const fenceMatch = trimmed.match(/```(?:\w+)?\s*\n?([\s\S]*?)\n?```/);
+  if (fenceMatch) {
+    const candidate = fenceMatch[1].trim();
+    if (candidate.startsWith('{') || candidate.startsWith('[')) {
+      return candidate;
+    }
+  }
+
+  // Find outermost JSON structure by tracking bracket depth,
+  // correctly ignoring brackets inside strings and escape sequences
+  const firstBrace = trimmed.indexOf('{');
+  const firstBracket = trimmed.indexOf('[');
+
+  if (firstBrace === -1 && firstBracket === -1) return trimmed;
+
+  let startIndex: number;
+  let openChar: string;
+  let closeChar: string;
+
+  if (firstBrace === -1 || (firstBracket !== -1 && firstBracket < firstBrace)) {
+    startIndex = firstBracket;
+    openChar = '[';
+    closeChar = ']';
+  } else {
+    startIndex = firstBrace;
+    openChar = '{';
+    closeChar = '}';
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = startIndex; i < trimmed.length; i++) {
+    const char = trimmed[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === '\\' && inString) {
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (char === openChar) depth++;
+    else if (char === closeChar && --depth === 0) return trimmed.slice(startIndex, i + 1);
+  }
+
+  return trimmed;
+};
+
 export const isValidJson = (value: string): boolean => {
   try {
     JSON.parse(value);

@@ -1,6 +1,6 @@
 import { join } from '@std/path';
-import type { Chunk, ChunkInfo, JsonObject } from './types.ts';
-import { TEMP_DIR } from './contants.ts';
+import type { ChunkInfo, JsonObject } from './types.ts';
+import { logger } from './logger.ts';
 
 export const resolvePath = (...paths: string[]) => {
   return join(Deno.cwd(), ...paths);
@@ -120,8 +120,25 @@ export const mergeInputs = (inputs: JsonObject[]): JsonObject => {
   return Object.assign({}, ...inputs);
 };
 
-export const writeTemp = async (tempJsonFileName: string, content: string) => {
-  await ensureDirectoryExists(TEMP_DIR);
-  const tempJsonFilePath = resolvePath(TEMP_DIR, tempJsonFileName);
+const getOsTempDir = (): string => {
+  if (Deno.build.os === 'windows') {
+    return Deno.env.get('TEMP') ?? Deno.env.get('TMP') ?? 'C:\\Windows\\Temp';
+  }
+  return Deno.env.get('TMPDIR') ?? '/tmp';
+};
+
+const resolveTempDir = async (targetLanguage: string): Promise<string> => {
+  const tempDir = getOsTempDir();
+  const glottoTempDir = join(tempDir, 'glotto');
+  await ensureDirectoryExists(glottoTempDir);
+  const languageTempDir = join(glottoTempDir, targetLanguage);
+  await ensureDirectoryExists(languageTempDir);
+  return languageTempDir;
+};
+
+export const writeTemp = async (targetLanguage: string, tempJsonFileName: string, content: string) => {
+  const tempDir = await resolveTempDir(targetLanguage);
+  const tempJsonFilePath = join(tempDir, tempJsonFileName);
   await Deno.writeTextFile(tempJsonFilePath, content, { create: true });
+  logger.info(`Temp saved: ${tempJsonFilePath}`);
 };

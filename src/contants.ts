@@ -39,5 +39,3 @@ Examples:
   glotto --key {{key}} -i en.json -o tr.json -f english -t turkish -p openai
   glotto --key {{key}} -i en.json -o tr.json -f english -t turkish -p anthropic
 `;
-
-export const TEMP_DIR = './tmp/';

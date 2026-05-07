@@ -46,9 +46,9 @@ await build({
       url: 'https://github.com/ibodev1/glotto/issues',
     },
     dependencies: {
-      '@google/genai': '^1.41.0',
-      'openai': '^6.21.0',
-      '@anthropic-ai/sdk': '^0.74.0',
+      '@google/genai': '^1.52.0',
+      'openai': '^6.36.0',
+      '@anthropic-ai/sdk': '^0.95.0',
       'consola': '^3.4.2',
     },
   },

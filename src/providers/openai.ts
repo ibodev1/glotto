@@ -1,6 +1,6 @@
 import OpenAI from '@openai/openai';
 import type { ChunkInfo, JsonObject, Translatable } from '../types.ts';
-import { delay, formatBytes, generatePrompts, isValidJson } from '../utilites.ts';
+import { delay, formatBytes, generatePrompts, isValidJson, stripJsonMarkdown } from '../utilites.ts';
 import { logger } from '../logger.ts';
 import { mergeInputs, writeTemp } from '../file.ts';
 import { BASE_RETRY_DELAY_MS, DEFAULT_MODELS, INTER_CHUNK_DELAY_MS, MAX_RETRIES } from '../contants.ts';
@@ -59,16 +59,22 @@ class OpenAIModel implements Translatable {
           continue;
         }
 
-        const tempJsonFileName = `${this.to}_chunk_${chunk.index + 1}.json`;
-        await writeTemp(tempJsonFileName, text);
+        const cleanedText = stripJsonMarkdown(text);
 
-        if (!isValidJson(text)) {
+        const tempJsonFileName = `chunk_${chunk.index + 1}.json`;
+        await writeTemp(this.to, tempJsonFileName, cleanedText);
+
+        if (!isValidJson(cleanedText)) {
+          if (attempt === MAX_RETRIES) {
+            logger.error(`${chunkLabel} Failed after ${MAX_RETRIES + 1} attempts: Invalid JSON response`);
+            return null;
+          }
           logger.error(`${chunkLabel} Invalid JSON response, saved to ${tempJsonFileName}`);
           continue;
         }
 
         logger.info(`${chunkLabel} Translated successfully (${formatBytes(chunk.byteSize)}, ${chunk.keyCount} keys)`);
-        return text;
+        return cleanedText;
       } catch (error) {
         const isLastAttempt = attempt === MAX_RETRIES;
         const errorMessage = error instanceof Error ? error.message : String(error);
