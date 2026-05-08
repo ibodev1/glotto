@@ -28,8 +28,8 @@ class AnthropicModel implements TextTranslator {
       messages: [{ role: 'user', content: prompt }],
     });
     return message.content
-      .filter((part) => part.type === 'text')
-      .map((part) => (part as { text: string }).text)
+      .filter((part): part is Anthropic.TextBlock => part.type === 'text')
+      .map((part) => part.text)
       .join('');
   }
 }

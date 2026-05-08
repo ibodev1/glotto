@@ -13,7 +13,7 @@ import type { TextTranslator, TranslateOptions, ValidatedTranslateArgs } from '.
 
 const spinner = new Spinner({ message: 'AI Thinks...', color: 'cyan' });
 
-const createTranslator = (args: ValidatedTranslateArgs, options: TranslateOptions): TextTranslator => {
+function createTranslator(args: ValidatedTranslateArgs, options: TranslateOptions): TextTranslator {
   switch (args.provider) {
     case 'gemini':
       return new Gemini(args.key, args.model, options);
@@ -24,7 +24,7 @@ const createTranslator = (args: ValidatedTranslateArgs, options: TranslateOption
     default:
       throw new Error(`Unknown provider: ${args.provider}`);
   }
-};
+}
 
 async function main() {
   try {
@@ -71,10 +71,18 @@ async function main() {
     logger.info('Output: ', validatedArgs.output);
     logger.info('From: ', validatedArgs.from);
     logger.info('To: ', validatedArgs.to);
-    if (validatedArgs.model) logger.info('Model: ', validatedArgs.model);
-    if (validatedArgs.url) logger.info('URL: ', validatedArgs.url);
-    if (validatedArgs.noLimit) logger.info('Rate limit protection: disabled (--no-limit)');
-    if (validatedArgs.noTimeout) logger.info('Request timeout: disabled (--no-timeout)');
+    if (validatedArgs.model) {
+      logger.info('Model: ', validatedArgs.model);
+    }
+    if (validatedArgs.url) {
+      logger.info('URL: ', validatedArgs.url);
+    }
+    if (validatedArgs.noLimit) {
+      logger.info('Rate limit protection: disabled (--no-limit)');
+    }
+    if (validatedArgs.noTimeout) {
+      logger.info('Request timeout: disabled (--no-timeout)');
+    }
     if (validatedArgs.maxBatchBytes !== DEFAULT_MAX_BATCH_BYTES) {
       logger.info(`Max batch size: ${formatBytes(validatedArgs.maxBatchBytes)}`);
     }

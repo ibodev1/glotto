@@ -1,6 +1,6 @@
 import type { Provider } from './types.ts';
 
-export const DEFAULT_PROVIDER: Provider = 'gemini';
+export const DEFAULT_PROVIDER: Provider = 'openai';
 
 export const DEFAULT_MODELS: Record<Provider, string> = {
   gemini: 'gemini-2.5-flash',
@@ -15,6 +15,10 @@ export const MAX_RETRIES = 3 as const;
 export const BASE_RETRY_DELAY_MS = 2_000 as const;
 
 export const INTER_BATCH_DELAY_MS = 1_500 as const;
+
+export const INTER_LEAF_DELAY_MS = 200 as const;
+
+export const PER_LEAF_FALLBACK_RATIO = 0.5 as const;
 
 export const HELP_TEXT = `
 Glotto AI Translator
