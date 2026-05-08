@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ibodev1/glotto/main/schema/glotto.schema.json",
+  "title": "Glotto config",
+  "description": "Configuration for the Glotto AI translator. CLI flags override values defined here.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor autocomplete."
+    },
+    "key": {
+      "type": "string",
+      "description": "API key for the AI provider."
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["openai", "gemini", "anthropic"],
+      "description": "AI translation provider."
+    },
+    "model": {
+      "type": "string",
+      "description": "Model name for the selected provider."
+    },
+    "input": {
+      "type": "string",
+      "description": "Path to source JSON file."
+    },
+    "output": {
+      "description": "Single target file path or array of paths (one per target language).",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      ]
+    },
+    "from": {
+      "type": "string",
+      "description": "Source language name."
+    },
+    "to": {
+      "description": "Target language name or array of names. Length must match output array.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      ]
+    },
+    "url": {
+      "type": "string",
+      "description": "Custom base URL for OpenAI/Anthropic providers."
+    },
+    "noLimit": {
+      "type": "boolean",
+      "description": "Disable inter-batch rate-limit delay.",
+      "default": false
+    },
+    "noTimeout": {
+      "type": "boolean",
+      "description": "Disable request timeout.",
+      "default": false
+    },
+    "maxBatchSize": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum source size per batch in KB.",
+      "default": 12
+    },
+    "stats": {
+      "type": "boolean",
+      "description": "Print AI usage statistics at the end of the run.",
+      "default": false
+    },
+    "incremental": {
+      "type": "boolean",
+      "description": "Translate only missing or empty keys when target file already exists.",
+      "default": false
+    }
+  }
+}

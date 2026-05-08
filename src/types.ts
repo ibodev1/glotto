@@ -14,6 +14,9 @@ export type TranslateArgs = {
   from?: string;
   to?: string;
   url?: string;
+  config?: string;
+  stats?: boolean;
+  incremental?: boolean;
   'no-limit'?: boolean;
   'no-timeout'?: boolean;
   'max-batch-size'?: string;
@@ -24,13 +27,31 @@ export type ValidatedTranslateArgs = {
   provider: Provider;
   model?: string;
   input: string;
-  output: string;
+  output: string[];
   from: string;
-  to: string;
+  to: string[];
   url?: string;
   noLimit: boolean;
   noTimeout: boolean;
   maxBatchBytes: number;
+  stats: boolean;
+  incremental: boolean;
+};
+
+export type GlottoConfig = {
+  key?: string;
+  provider?: Provider;
+  model?: string;
+  input?: string;
+  output?: string | string[];
+  from?: string;
+  to?: string | string[];
+  url?: string;
+  noLimit?: boolean;
+  noTimeout?: boolean;
+  maxBatchSize?: number;
+  stats?: boolean;
+  incremental?: boolean;
 };
 
 export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
@@ -55,6 +76,16 @@ export type Batch = {
   byteSize: number;
 };
 
+export type TranslateUsage = {
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export type TranslateResult = {
+  text: string;
+  usage?: TranslateUsage;
+};
+
 export interface TextTranslator {
-  translate(prompt: string): Promise<string>;
+  translate(prompt: string): Promise<TranslateResult>;
 }

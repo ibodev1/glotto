@@ -1,8 +1,11 @@
 import type { Provider, TranslateArgs, ValidatedTranslateArgs } from './types.ts';
-import type { Args } from '@std/cli';
 import { DEFAULT_MAX_BATCH_BYTES } from './contants.ts';
 
-export function validateArgs(args: Args<TranslateArgs>): ValidatedTranslateArgs {
+function splitCsv(value: string): string[] {
+  return value.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+export function validateArgs(args: TranslateArgs): ValidatedTranslateArgs {
   if (!args.key) {
     throw new Error('AI Key is required');
   }
@@ -22,6 +25,19 @@ export function validateArgs(args: Args<TranslateArgs>): ValidatedTranslateArgs 
     throw new Error('Target language (to) parameter is required');
   }
 
+  const toList = splitCsv(args.to);
+  const outputList = splitCsv(args.output);
+
+  if (toList.length === 0) {
+    throw new Error('Target language (to) must contain at least one value');
+  }
+  if (outputList.length === 0) {
+    throw new Error('Output must contain at least one value');
+  }
+  if (toList.length !== outputList.length) {
+    throw new Error(`--to (${toList.length}) and --output (${outputList.length}) must have the same number of values`);
+  }
+
   let maxBatchBytes = DEFAULT_MAX_BATCH_BYTES;
   const rawMaxBatchSize = args['max-batch-size'];
   if (rawMaxBatchSize !== undefined) {
@@ -37,13 +53,15 @@ export function validateArgs(args: Args<TranslateArgs>): ValidatedTranslateArgs 
     provider: args.provider as Provider,
     model: args.model,
     input: args.input,
-    output: args.output,
+    output: outputList,
     from: args.from,
-    to: args.to,
+    to: toList,
     url: args.url,
     noLimit: args['no-limit'] ?? false,
     noTimeout: args['no-timeout'] ?? false,
     maxBatchBytes,
+    stats: args.stats ?? false,
+    incremental: args.incremental ?? false,
   };
 }
 

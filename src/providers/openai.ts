@@ -1,5 +1,5 @@
 import OpenAI from '@openai/openai';
-import type { TextTranslator, TranslateOptions } from '../types.ts';
+import type { TextTranslator, TranslateOptions, TranslateResult, TranslateUsage } from '../types.ts';
 import { DEFAULT_MODELS } from '../contants.ts';
 
 class OpenAIModel implements TextTranslator {
@@ -20,13 +20,21 @@ class OpenAIModel implements TextTranslator {
     });
   }
 
-  async translate(prompt: string): Promise<string> {
+  async translate(prompt: string): Promise<TranslateResult> {
     const completion = await this.client.chat.completions.create({
       model: this.model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,
     });
-    return completion.choices[0]?.message?.content ?? '';
+    const text = completion.choices[0]?.message?.content ?? '';
+    let usage: TranslateUsage | undefined;
+    if (completion.usage) {
+      usage = {
+        inputTokens: completion.usage.prompt_tokens ?? 0,
+        outputTokens: completion.usage.completion_tokens ?? 0,
+      };
+    }
+    return { text, usage };
   }
 }
 

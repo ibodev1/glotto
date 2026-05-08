@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import type { TextTranslator, TranslateOptions } from '../types.ts';
+import type { TextTranslator, TranslateOptions, TranslateResult, TranslateUsage } from '../types.ts';
 import { DEFAULT_MODELS } from '../contants.ts';
 
 class Gemini implements TextTranslator {
@@ -18,8 +18,8 @@ class Gemini implements TextTranslator {
     });
   }
 
-  async translate(prompt: string): Promise<string> {
-    const { text } = await this.genAI.models.generateContent({
+  async translate(prompt: string): Promise<TranslateResult> {
+    const response = await this.genAI.models.generateContent({
       model: this.model,
       contents: prompt,
       config: {
@@ -27,7 +27,15 @@ class Gemini implements TextTranslator {
         temperature: 0.2,
       },
     });
-    return text ?? '';
+    const text = response.text ?? '';
+    let usage: TranslateUsage | undefined;
+    if (response.usageMetadata) {
+      usage = {
+        inputTokens: response.usageMetadata.promptTokenCount ?? 0,
+        outputTokens: response.usageMetadata.candidatesTokenCount ?? 0,
+      };
+    }
+    return { text, usage };
   }
 }
 

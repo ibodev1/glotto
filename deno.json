@@ -1,6 +1,6 @@
 {
   "name": "@ibodev/glotto",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "exports": "./cli.ts",
   "lock": false,
   "nodeModulesDir": "auto",
@@ -10,7 +10,8 @@
     "build:npm": "deno run -A scripts/build_npm.ts",
     "publish": "deno publish",
     "publish:npm": "cd ./npm && npm publish",
-    "check": "deno check **/*.ts"
+    "check": "deno check **/*.ts",
+    "test": "deno test -A --no-check tests/"
   },
   "fmt": {
     "semiColons": true,
@@ -18,13 +19,14 @@
     "lineWidth": 160
   },
   "imports": {
-    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.95.0",
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.95.1",
     "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
-    "@google/genai": "npm:@google/genai@^1.52.0",
-    "@openai/openai": "npm:openai@^6.36.0",
+    "@google/genai": "npm:@google/genai@^2.0.0",
+    "@openai/openai": "npm:openai@^6.37.0",
+    "@std/assert": "jsr:@std/assert@^1.0.19",
     "@std/cli": "jsr:@std/cli@^1.0.29",
     "@std/path": "jsr:@std/path@^1.1.4",
     "consola": "npm:consola@^3.4.2"
   },
-  "allowScripts": ["npm:@google/genai@1.52.0", "npm:protobufjs@7.5.6"]
+  "allowScripts": ["npm:@google/genai@1.52.0", "npm:@google/genai@2.0.0", "npm:protobufjs@7.5.6"]
 }
