@@ -18,6 +18,16 @@
     "singleQuote": true,
     "lineWidth": 160
   },
+  "publish": {
+    "exclude": [
+      "tests/",
+      "scripts/",
+      "npm/",
+      "assets/",
+      "glotto.exe",
+      "CLAUDE.md"
+    ]
+  },
   "imports": {
     "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.95.1",
     "@deno/dnt": "jsr:@deno/dnt@^0.42.3",
