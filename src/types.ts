@@ -1,89 +1,45 @@
-export type Provider = 'gemini' | 'openai' | 'anthropic';
+export type JsonPrimitive = string | number | boolean | null;
 
-export type TranslateOptions = {
-  noLimit: boolean;
-  noTimeout: boolean;
-};
-
-export type TranslateArgs = {
-  key?: string;
-  provider?: string;
-  model?: string;
-  input?: string;
-  output?: string;
-  from?: string;
-  to?: string;
-  url?: string;
-  config?: string;
-  stats?: boolean;
-  incremental?: boolean;
-  'no-limit'?: boolean;
-  'no-timeout'?: boolean;
-  'max-batch-size'?: string;
-};
-
-export type ValidatedTranslateArgs = {
-  key: string;
-  provider: Provider;
-  model?: string;
-  input: string;
-  output: string[];
-  from: string;
-  to: string[];
-  url?: string;
-  noLimit: boolean;
-  noTimeout: boolean;
-  maxBatchBytes: number;
-  stats: boolean;
-  incremental: boolean;
-};
-
-export type GlottoConfig = {
-  key?: string;
-  provider?: Provider;
-  model?: string;
-  input?: string;
-  output?: string | string[];
-  from?: string;
-  to?: string | string[];
-  url?: string;
-  noLimit?: boolean;
-  noTimeout?: boolean;
-  maxBatchSize?: number;
-  stats?: boolean;
-  incremental?: boolean;
-};
-
-export type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
 export interface JsonObject {
   [key: string]: JsonValue;
 }
+
 export type JsonArray = JsonValue[];
 
+export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+
+export type JsonContainer = JsonObject | JsonArray;
+
 export type PathSegment = string | number;
-export type Path = PathSegment[];
+
+export type Path = readonly PathSegment[];
 
 export type Leaf = {
-  id: number;
-  path: Path;
-  value: JsonValue;
-  translatable: boolean;
+  readonly id: number;
+  readonly path: Path;
+  readonly value: JsonValue;
+  readonly translatable: boolean;
+};
+
+export type TranslatableLeaf = Leaf & {
+  readonly value: string;
+  readonly translatable: true;
 };
 
 export type Batch = {
-  index: number;
-  leaves: Leaf[];
-  byteSize: number;
+  readonly index: number;
+  readonly leaves: readonly TranslatableLeaf[];
+  readonly byteSize: number;
 };
 
-export type TranslateUsage = {
+export type TokenUsage = {
   inputTokens: number;
   outputTokens: number;
 };
 
 export type TranslateResult = {
-  text: string;
-  usage?: TranslateUsage;
+  readonly text: string;
+  readonly usage?: TokenUsage;
 };
 
 export interface TextTranslator {

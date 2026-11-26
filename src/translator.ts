@@ -1,102 +1,130 @@
-import type { Batch, JsonValue, Leaf, Path, TextTranslator, TranslateOptions, TranslateUsage } from './types.ts';
-import { logger } from './logger.ts';
-import { delay, formatBytes } from './utilites.ts';
-import { BASE_RETRY_DELAY_MS, INTER_BATCH_DELAY_MS, INTER_LEAF_DELAY_MS, MAX_RETRIES, PER_LEAF_FALLBACK_RATIO } from './contants.ts';
+import {
+  BASE_RETRY_DELAY_MS,
+  INTER_BATCH_DELAY_MS,
+  INTER_ENTRY_DELAY_MS,
+  MAX_RETRIES,
+  PER_ENTRY_FALLBACK_RATIO,
+} from "./constants.ts";
+import { FatalError } from "./errors.ts";
+import { containerFor, isContainer, setPath } from "./json.ts";
+import { logger } from "./logger.ts";
+import type {
+  Batch,
+  JsonValue,
+  Leaf,
+  Path,
+  TextTranslator,
+  TokenUsage,
+  TranslatableLeaf,
+} from "./types.ts";
+import { errorMessage, formatPath } from "./utils.ts";
 
-const encoder = new TextEncoder();
+const ENTRY_SEPARATOR = "\n";
 
-function byteSize(s: string): number {
-  return encoder.encode(s).byteLength;
+const ENTRY_SEPARATOR_BYTES = Buffer.byteLength(ENTRY_SEPARATOR);
+
+const TAG_PATTERNS: readonly RegExp[] = [
+  /≪\s*(\d+)\s*≫([\s\S]*?)≪\s*\/\s*\1\s*≫/g,
+  /<<\s*(\d+)\s*>>([\s\S]*?)<<\s*\/\s*\1\s*>>/g,
+  /«\s*(\d+)\s*»([\s\S]*?)«\s*\/\s*\1\s*»/g,
+];
+
+export function isTranslatable(leaf: Leaf): leaf is TranslatableLeaf {
+  return leaf.translatable && typeof leaf.value === "string";
 }
 
 export function extractLeaves(data: JsonValue): Leaf[] {
-  const out: Leaf[] = [];
-  let nextId = 0;
+  const leaves: Leaf[] = [];
+
+  function push(path: Path, value: JsonValue, translatable: boolean): void {
+    leaves.push({ id: leaves.length + 1, path, value, translatable });
+  }
 
   function walk(node: JsonValue, path: Path): void {
-    if (node === null || typeof node !== 'object') {
-      const isString = typeof node === 'string';
-      out.push({
-        id: ++nextId,
-        path,
-        value: node,
-        translatable: isString && node.trim().length > 0,
-      });
-      return;
-    }
     if (Array.isArray(node)) {
       if (node.length === 0) {
-        out.push({ id: ++nextId, path, value: node, translatable: false });
+        push(path, node, false);
         return;
       }
-      node.forEach((item, i) => walk(item, [...path, i]));
+      for (const [index, item] of node.entries()) {
+        walk(item, [...path, index]);
+      }
       return;
     }
-    const entries = Object.entries(node);
-    if (entries.length === 0) {
-      out.push({ id: ++nextId, path, value: node, translatable: false });
+    if (isContainer(node)) {
+      const entries = Object.entries(node);
+      if (entries.length === 0) {
+        push(path, node, false);
+        return;
+      }
+      for (const [key, value] of entries) {
+        walk(value, [...path, key]);
+      }
       return;
     }
-    for (const [k, v] of entries) {
-      walk(v, [...path, k]);
-    }
+    push(path, node, typeof node === "string" && node.trim().length > 0);
   }
 
   walk(data, []);
-  return out;
+  return leaves;
 }
 
-function tagOpen(id: number): string {
-  return `≪${id}≫`;
+export function wrapEntry(leaf: TranslatableLeaf): string {
+  return `≪${leaf.id}≫${leaf.value}≪/${leaf.id}≫`;
 }
 
-function tagClose(id: number): string {
-  return `≪/${id}≫`;
-}
-
-const TAG_OVERHEAD_CHARS = 8;
-
-function wrapEntry(leaf: Leaf): string {
-  return `${tagOpen(leaf.id)}${String(leaf.value)}${tagClose(leaf.id)}`;
-}
-
-export function groupIntoBatches(leaves: Leaf[], maxBytes: number): Batch[] {
-  const translatable = leaves.filter((l) => l.translatable);
+export function groupIntoBatches(
+  leaves: readonly Leaf[],
+  maxBatchBytes: number,
+): Batch[] {
   const batches: Batch[] = [];
-  let current: Leaf[] = [];
-  let currentSize = 0;
+  let current: TranslatableLeaf[] = [];
+  let currentBytes = 0;
 
-  for (const leaf of translatable) {
-    const valueBytes = byteSize(String(leaf.value));
-    const idChars = String(leaf.id).length;
-    const overhead = TAG_OVERHEAD_CHARS + idChars * 2 + 1;
-    const itemSize = valueBytes + overhead;
-
-    if (current.length > 0 && currentSize + itemSize > maxBytes) {
-      batches.push({ index: batches.length, leaves: current, byteSize: currentSize });
-      current = [];
-      currentSize = 0;
+  for (const leaf of leaves) {
+    if (!isTranslatable(leaf)) {
+      continue;
     }
+    const entryBytes = Buffer.byteLength(wrapEntry(leaf));
+    if (
+      current.length > 0 &&
+      currentBytes + ENTRY_SEPARATOR_BYTES + entryBytes > maxBatchBytes
+    ) {
+      batches.push({
+        index: batches.length,
+        leaves: current,
+        byteSize: currentBytes,
+      });
+      current = [];
+      currentBytes = 0;
+    }
+    currentBytes +=
+      current.length === 0 ? entryBytes : ENTRY_SEPARATOR_BYTES + entryBytes;
     current.push(leaf);
-    currentSize += itemSize;
   }
 
   if (current.length > 0) {
-    batches.push({ index: batches.length, leaves: current, byteSize: currentSize });
+    batches.push({
+      index: batches.length,
+      leaves: current,
+      byteSize: currentBytes,
+    });
   }
-
   return batches;
 }
 
-export function buildBatchPrompt(from: string, to: string, leaves: Leaf[]): string {
-  const entries = leaves.map(wrapEntry).join('\n');
+export function buildBatchPrompt(
+  from: string,
+  to: string,
+  leaves: readonly TranslatableLeaf[],
+): string {
   return `Translate each tagged entry below from ${from} to ${to}.
 
 Tag format:
 - Every entry is wrapped exactly as ≪N≫value≪/N≫, where N is the entry id (a positive integer).
 - The opening marker is the character ≪ (U+226A), then the id, then ≫ (U+226B). The closing marker is ≪, /, the same id, then ≫.
 - Copy these markers verbatim. Do not put spaces inside them. Do not change them to <<>>, «», <tag>, [n], or any other notation.
-- The id must match the input id of the same entry — never renumber, merge, split, or reorder entries.
+- The id must match the input id of the same entry. Never renumber, merge, split, or reorder entries.
 
 What to write back:
 - One ≪N≫translated_value≪/N≫ block per input entry, in the same order, separated by single newlines.
@@ -105,10 +133,14 @@ What to write back:
 - Output nothing else: no headings, no prose, no commentary, no code fences, no language labels.
 
 Now translate the following entries:
-${entries}`;
+${leaves.map(wrapEntry).join(ENTRY_SEPARATOR)}`;
 }
 
-export function buildSinglePrompt(from: string, to: string, value: string): string {
+export function buildEntryPrompt(
+  from: string,
+  to: string,
+  value: string,
+): string {
   return `You are a professional ${from} to ${to} translator. Your goal is to accurately convey the meaning and nuances of the original ${from} text while adhering to ${to} grammar, vocabulary, and cultural sensitivities. Preserve every variable ({{name}}, {name}, __VAR__, $t(...), %s, %d), HTML tag, markdown token, escape sequence, and special character exactly as given.
 Produce only the ${to} translation, without any additional explanations, quotes, labels, or commentary. Please translate the following ${from} text into ${to}:
 
@@ -116,245 +148,292 @@ Produce only the ${to} translation, without any additional explanations, quotes,
 ${value}`;
 }
 
-const TAG_PATTERNS: RegExp[] = [
-  /≪\s*(\d+)\s*≫([\s\S]*?)≪\s*\/\s*\1\s*≫/g,
-  /<<\s*(\d+)\s*>>([\s\S]*?)<<\s*\/\s*\1\s*>>/g,
-  /«\s*(\d+)\s*»([\s\S]*?)«\s*\/\s*\1\s*»/g,
-];
-
 export function decodeResponse(text: string): Map<number, string> {
-  const map = new Map<number, string>();
+  const decoded = new Map<number, string>();
   for (const pattern of TAG_PATTERNS) {
-    for (const match of text.matchAll(pattern)) {
-      const id = parseInt(match[1], 10);
-      if (!map.has(id)) {
-        map.set(id, match[2].trim());
+    for (const [, idText, value] of text.matchAll(pattern)) {
+      if (idText === undefined || value === undefined) {
+        continue;
+      }
+      const id = Number(idText);
+      if (!decoded.has(id)) {
+        decoded.set(id, value);
       }
     }
   }
-  return map;
+  return decoded;
 }
 
-export function setPath(root: JsonValue, path: Path, value: JsonValue): void {
-  let node: JsonValue = root;
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i];
-    const nextKey = path[i + 1];
-    const container = node as Record<string | number, JsonValue>;
-    if (container[key] === undefined) {
-      container[key] = typeof nextKey === 'number' ? [] : {};
-    }
-    node = container[key];
+export function alignWhitespace(source: string, translation: string): string {
+  const leading = source.slice(0, source.length - source.trimStart().length);
+  const trailing = source.slice(source.trimEnd().length);
+  return `${leading}${translation.trim()}${trailing}`;
+}
+
+export function leafValue(
+  leaf: Leaf,
+  translations: ReadonlyMap<number, string>,
+): JsonValue | undefined {
+  if (!leaf.translatable) {
+    return leaf.value;
   }
-  (node as Record<string | number, JsonValue>)[path[path.length - 1]] = value;
+  const translation = translations.get(leaf.id);
+  if (translation !== undefined) {
+    return translation;
+  }
+  return typeof leaf.path.at(-1) === "number" ? "" : undefined;
 }
 
-export function reconstruct(allLeaves: Leaf[], translations: Map<number, string>): JsonValue {
-  if (allLeaves.length === 0) {
+export function reconstruct(
+  leaves: readonly Leaf[],
+  translations: ReadonlyMap<number, string>,
+): JsonValue {
+  const first = leaves[0];
+  if (first === undefined) {
     return {};
   }
-  const firstStep = allLeaves[0].path[0];
-  if (firstStep === undefined) {
-    const only = allLeaves[0];
-    return only.translatable ? translations.get(only.id) ?? only.value : only.value;
+  const firstSegment = first.path[0];
+  if (firstSegment === undefined) {
+    return leafValue(first, translations) ?? first.value;
   }
-  const root: JsonValue = typeof firstStep === 'number' ? [] : {};
-  for (const leaf of allLeaves) {
-    const value = leaf.translatable && translations.has(leaf.id) ? (translations.get(leaf.id) as JsonValue) : leaf.value;
-    setPath(root, leaf.path, value);
+  const root = containerFor(firstSegment);
+  for (const leaf of leaves) {
+    const value = leafValue(leaf, translations);
+    if (value !== undefined) {
+      setPath(root, leaf.path, value);
+    }
   }
   return root;
 }
 
+export type RunBatchesOptions = {
+  readonly from: string;
+  readonly to: string;
+  readonly noLimit: boolean;
+  readonly sleep?: (ms: number) => Promise<void>;
+  readonly onBatchStart?: (batch: Batch, total: number) => void;
+};
+
 export type RunBatchesResult = {
-  translations: Map<number, string>;
-  usage: TranslateUsage;
+  readonly translations: Map<number, string>;
+  readonly failed: TranslatableLeaf[];
+  readonly usage: TokenUsage;
+  readonly calls: number;
+  readonly error?: FatalError;
+};
+
+type Session = {
+  readonly translator: TextTranslator;
+  readonly from: string;
+  readonly to: string;
+  readonly noLimit: boolean;
+  readonly sleep: (ms: number) => Promise<void>;
+  readonly translations: Map<number, string>;
+  readonly usage: TokenUsage;
   calls: number;
 };
 
-function accumulateUsage(target: TranslateUsage, source: TranslateUsage | undefined): void {
-  if (!source) {
-    return;
-  }
-  target.inputTokens += source.inputTokens;
-  target.outputTokens += source.outputTokens;
+function retryDelay(attempt: number): number {
+  return BASE_RETRY_DELAY_MS * 2 ** (attempt - 1);
 }
 
-async function translateOne(
-  translator: TextTranslator,
-  from: string,
-  to: string,
-  value: string,
-  usage: TranslateUsage,
-  callCounter: { count: number },
-): Promise<string | null> {
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      await delay(BASE_RETRY_DELAY_MS * Math.pow(2, attempt - 1));
-    }
-    try {
-      callCounter.count += 1;
-      const response = await translator.translate(buildSinglePrompt(from, to, value));
-      accumulateUsage(usage, response.usage);
-      const trimmed = response.text.trim();
-      if (trimmed.length > 0) {
-        return trimmed;
-      }
-    } catch {
-      if (attempt === MAX_RETRIES) {
-        return null;
-      }
-    }
+function rethrowFatal(error: unknown): void {
+  if (error instanceof FatalError) {
+    throw error;
   }
-  return null;
 }
 
-async function runBatchAttempts(
-  batchLeaves: Leaf[],
-  translator: TextTranslator,
-  from: string,
-  to: string,
+async function request(session: Session, prompt: string): Promise<string> {
+  session.calls += 1;
+  const { text, usage } = await session.translator.translate(prompt);
+  if (usage) {
+    session.usage.inputTokens += usage.inputTokens;
+    session.usage.outputTokens += usage.outputTokens;
+  }
+  return text;
+}
+
+function storeDecoded(
+  session: Session,
+  leaves: readonly TranslatableLeaf[],
+  decoded: ReadonlyMap<number, string>,
+): TranslatableLeaf[] {
+  const missing: TranslatableLeaf[] = [];
+  for (const leaf of leaves) {
+    const value = decoded.get(leaf.id);
+    if (value === undefined || value.trim() === "") {
+      missing.push(leaf);
+      continue;
+    }
+    session.translations.set(leaf.id, alignWhitespace(leaf.value, value));
+  }
+  return missing;
+}
+
+async function translateBatch(
+  session: Session,
+  leaves: readonly TranslatableLeaf[],
   label: string,
-  translations: Map<number, string>,
-  usage: TranslateUsage,
-  callCounter: { count: number },
-): Promise<Leaf[]> {
-  let remaining: Leaf[] = [...batchLeaves];
-  let firstAttempt = true;
+): Promise<readonly TranslatableLeaf[]> {
+  let remaining = leaves;
+  let responded = false;
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     if (attempt > 0) {
-      const backoffMs = BASE_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-      logger.warn(`${label} Retry ${attempt}/${MAX_RETRIES} after ${backoffMs}ms backoff (${remaining.length} entries)...`);
-      await delay(backoffMs);
+      const delay = retryDelay(attempt);
+      logger.warn(
+        `${label} Retry ${attempt}/${MAX_RETRIES} in ${delay}ms (${remaining.length} entries)`,
+      );
+      await session.sleep(delay);
     }
 
+    let text: string;
     try {
-      const prompt = buildBatchPrompt(from, to, remaining);
-      callCounter.count += 1;
-      const response = await translator.translate(prompt);
-      accumulateUsage(usage, response.usage);
-      const text = response.text;
-
-      if (!text || text.trim().length === 0) {
-        if (attempt === MAX_RETRIES) {
-          return remaining;
-        }
-        logger.warn(`${label} Attempt ${attempt + 1} returned empty response`);
-        continue;
-      }
-
-      const decoded = decodeResponse(text);
-      const stillMissing: Leaf[] = [];
-      for (const leaf of remaining) {
-        const value = decoded.get(leaf.id);
-        if (!value || value.trim().length === 0) {
-          stillMissing.push(leaf);
-        } else {
-          translations.set(leaf.id, value);
-        }
-      }
-
-      if (stillMissing.length === 0) {
-        return [];
-      }
-
-      if (firstAttempt && stillMissing.length >= remaining.length * PER_LEAF_FALLBACK_RATIO) {
-        logger.warn(
-          `${label} Batch mode unreliable for this model (${stillMissing.length}/${remaining.length} missing on first attempt), switching to per-entry mode`,
-        );
-        return stillMissing;
-      }
-
-      logger.warn(`${label} ${stillMissing.length}/${remaining.length} entries missing, will retry`);
-      firstAttempt = false;
-      remaining = stillMissing;
+      text = await request(
+        session,
+        buildBatchPrompt(session.from, session.to, remaining),
+      );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (attempt === MAX_RETRIES) {
-        logger.warn(`${label} Batch attempt failed after retries: ${message}`);
-        return remaining;
-      }
-      logger.warn(`${label} Attempt ${attempt + 1} failed: ${message}`);
+      rethrowFatal(error);
+      lastError = error;
+      logger.warn(`${label} Request failed: ${errorMessage(error)}`);
+      continue;
     }
+
+    if (text.trim() === "") {
+      logger.warn(`${label} Empty response`);
+      continue;
+    }
+
+    const firstResponse = !responded;
+    responded = true;
+    const missing = storeDecoded(session, remaining, decodeResponse(text));
+    if (missing.length === 0) {
+      return [];
+    }
+    if (
+      firstResponse &&
+      missing.length >= remaining.length * PER_ENTRY_FALLBACK_RATIO
+    ) {
+      logger.warn(
+        `${label} ${missing.length}/${remaining.length} entries missing in the response, switching to per-entry mode`,
+      );
+      return missing;
+    }
+    logger.warn(
+      `${label} ${missing.length}/${remaining.length} entries missing in the response`,
+    );
+    remaining = missing;
   }
 
+  if (!responded && lastError !== undefined) {
+    throw new FatalError(
+      `${label} Giving up after ${MAX_RETRIES + 1} failed requests: ${errorMessage(lastError)}`,
+      { cause: lastError },
+    );
+  }
   return remaining;
 }
 
-async function runPerLeafFallback(
-  leaves: Leaf[],
-  translator: TextTranslator,
-  from: string,
-  to: string,
-  options: TranslateOptions,
+async function translateEntry(
+  session: Session,
+  leaf: TranslatableLeaf,
   label: string,
-  translations: Map<number, string>,
-  usage: TranslateUsage,
-  callCounter: { count: number },
-): Promise<Leaf[]> {
-  logger.info(`${label} Per-entry fallback for ${leaves.length} entries`);
-  const failed: Leaf[] = [];
-  for (let i = 0; i < leaves.length; i++) {
-    if (i > 0 && !options.noLimit) {
-      await delay(INTER_LEAF_DELAY_MS);
+): Promise<string | undefined> {
+  let lastProblem = "empty response";
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await session.sleep(retryDelay(attempt));
     }
-    const leaf = leaves[i];
-    const result = await translateOne(translator, from, to, String(leaf.value), usage, callCounter);
-    if (result) {
-      translations.set(leaf.id, result);
-    } else {
-      logger.warn(`${label} Per-entry failed for id=${leaf.id}`);
+    try {
+      const text = await request(
+        session,
+        buildEntryPrompt(session.from, session.to, leaf.value),
+      );
+      if (text.trim() !== "") {
+        return alignWhitespace(leaf.value, text);
+      }
+      lastProblem = "empty response";
+    } catch (error) {
+      rethrowFatal(error);
+      lastProblem = errorMessage(error);
+    }
+  }
+  logger.warn(`${label} ${formatPath(leaf.path)} failed: ${lastProblem}`);
+  return undefined;
+}
+
+async function translateEntries(
+  session: Session,
+  leaves: readonly TranslatableLeaf[],
+  label: string,
+): Promise<TranslatableLeaf[]> {
+  logger.info(`${label} Translating ${leaves.length} entries one by one`);
+  const failed: TranslatableLeaf[] = [];
+  for (const [index, leaf] of leaves.entries()) {
+    if (index > 0 && !session.noLimit) {
+      await session.sleep(INTER_ENTRY_DELAY_MS);
+    }
+    const translation = await translateEntry(session, leaf, label);
+    if (translation === undefined) {
       failed.push(leaf);
+      continue;
     }
+    session.translations.set(leaf.id, translation);
   }
   return failed;
 }
 
 export async function runBatches(
-  batches: Batch[],
+  batches: readonly Batch[],
   translator: TextTranslator,
-  from: string,
-  to: string,
-  options: TranslateOptions,
+  options: RunBatchesOptions,
 ): Promise<RunBatchesResult> {
-  const translations = new Map<number, string>();
-  const failedIds: number[] = [];
-  const usage: TranslateUsage = { inputTokens: 0, outputTokens: 0 };
-  const callCounter = { count: 0 };
+  const session: Session = {
+    translator,
+    from: options.from,
+    to: options.to,
+    noLimit: options.noLimit,
+    sleep: options.sleep ?? Bun.sleep,
+    translations: new Map(),
+    usage: { inputTokens: 0, outputTokens: 0 },
+    calls: 0,
+  };
+  const failed: TranslatableLeaf[] = [];
+  let error: FatalError | undefined;
 
-  for (let i = 0; i < batches.length; i++) {
-    const batch = batches[i];
-    const label = `[Batch ${batch.index + 1}/${batches.length}]`;
-
-    if (i > 0 && !options.noLimit) {
-      logger.info(`Waiting ${INTER_BATCH_DELAY_MS}ms before next batch (rate limit protection)...`);
-      await delay(INTER_BATCH_DELAY_MS);
+  for (const [position, batch] of batches.entries()) {
+    if (error !== undefined) {
+      failed.push(...batch.leaves);
+      continue;
     }
-
-    const missingAfterBatch = await runBatchAttempts(batch.leaves, translator, from, to, label, translations, usage, callCounter);
-
-    let stillFailed: Leaf[] = [];
-    if (missingAfterBatch.length > 0) {
-      stillFailed = await runPerLeafFallback(missingAfterBatch, translator, from, to, options, label, translations, usage, callCounter);
+    const label = `[Batch ${position + 1}/${batches.length}]`;
+    options.onBatchStart?.(batch, batches.length);
+    if (position > 0 && !session.noLimit) {
+      await session.sleep(INTER_BATCH_DELAY_MS);
     }
-
-    const succeeded = batch.leaves.length - stillFailed.length;
-    if (stillFailed.length === 0) {
-      logger.info(`${label} Translated successfully (${formatBytes(batch.byteSize)}, ${succeeded} entries)`);
-    } else {
-      logger.error(`${label} ${stillFailed.length}/${batch.leaves.length} entries failed permanently`);
-      for (const leaf of stillFailed) {
-        failedIds.push(leaf.id);
+    try {
+      const missing = await translateBatch(session, batch.leaves, label);
+      if (missing.length > 0) {
+        failed.push(...(await translateEntries(session, missing, label)));
       }
+    } catch (caught) {
+      if (!(caught instanceof FatalError)) {
+        throw caught;
+      }
+      error = caught;
+      failed.push(
+        ...batch.leaves.filter((leaf) => !session.translations.has(leaf.id)),
+      );
     }
   }
 
-  if (failedIds.length > 0) {
-    const preview = failedIds.slice(0, 20).join(', ');
-    const more = failedIds.length > 20 ? `, …(+${failedIds.length - 20})` : '';
-    throw new Error(`Translation failed for ${failedIds.length} entry/entries (ids: ${preview}${more})`);
-  }
-
-  return { translations, usage, calls: callCounter.count };
+  return {
+    translations: session.translations,
+    failed,
+    usage: session.usage,
+    calls: session.calls,
+    error,
+  };
 }

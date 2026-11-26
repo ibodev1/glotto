@@ -1,222 +1,118 @@
-# Glotto AI Translator
+# Glotto
 
-Glotto translates i18n JSON files (i18next, react-intl, vue-i18n, etc.) using AI providers without forcing the model to produce JSON. It walks the input JSON,
-extracts every string leaf with its path, sends them to the model as plain-text tagged batches, and reconstructs the JSON from the responses. The original
-structure, keys, arrays, variables and HTML tags are preserved by Glotto itself — the model only sees and produces text.
+Translate i18n JSON files (i18next, react-intl, vue-i18n and similar) with **any OpenAI-compatible API**: OpenAI, Gemini, Claude, OpenRouter, or local models through Ollama, LM Studio, llama.cpp and vLLM.
 
-## Installation
+Glotto pulls every string out of your JSON, sends the strings to the model as tagged plain-text batches, and rebuilds the file itself. Keys, nesting, arrays, placeholders and HTML stay intact, because the model never has to write JSON.
 
-### [JSR (Deno)](https://jsr.io/@ibodev/glotto)
+## Install
 
-```bash
-deno install --global --name glotto -A jsr:@ibodev/glotto
-```
-
-Or run without installing:
+Requires [Bun](https://bun.com) 1.2 or newer.
 
 ```bash
-deno run -A jsr:@ibodev/glotto
+bun add -g glotto     # or: npm i -g glotto
+bunx glotto --help    # run without installing
 ```
 
-### [npm (Node)](https://www.npmjs.com/package/glotto)
+## Quick start
 
 ```bash
-npm install --global glotto
+# Local model with Ollama: no API key needed
+glotto -u http://localhost:11434/v1 -m <model> -i en.json -o tr.json -f English -t Turkish
+
+# Cloud model with the key read from .env
+glotto --env-key OPENAI_API_KEY -m <model> -i en.json -o tr.json -f English -t Turkish
 ```
 
-Or via npx:
+## Endpoints
+
+Any server that implements `POST /chat/completions` works. Set `--url` and a model name that the server knows.
+
+| Provider         | `--url`                                                    |
+| ---------------- | ---------------------------------------------------------- |
+| OpenAI           | default (`https://api.openai.com/v1`)                      |
+| Google Gemini    | `https://generativelanguage.googleapis.com/v1beta/openai/` |
+| Anthropic Claude | `https://api.anthropic.com/v1/`                            |
+| OpenRouter       | `https://openrouter.ai/api/v1`                             |
+| Ollama           | `http://localhost:11434/v1`                                |
+| LM Studio        | `http://localhost:1234/v1`                                 |
+| llama.cpp        | `http://localhost:8080/v1`                                 |
+| vLLM             | `http://localhost:8000/v1`                                 |
+
+Glotto sends `temperature` only when you set it, because some providers (for example newer Claude models) reject custom values. A leading `<think>…</think>` block from local reasoning models is removed automatically.
+
+## API key
+
+- `--key <key>` passes the key directly.
+- `--env-key <NAME>` reads the key from an environment variable. Bun loads `.env` from the working directory automatically, so `OPENAI_API_KEY=…` in `.env` together with `--env-key OPENAI_API_KEY` is enough.
+- If you pass neither, requests are sent without an `Authorization` header, which is what local servers expect.
+
+## Multiple targets
+
+`--to` and `--output` take comma-separated lists that pair up by position.
 
 ```bash
-npx glotto
+glotto --env-key OPENAI_API_KEY -m <model> -i en.json -f English -t Turkish,German -o tr.json,de.json
 ```
 
-### [pnpm](https://pnpm.io/)
+## Incremental mode
 
-```bash
-pnpm add --global glotto
-```
+With `--incremental`, Glotto reads each existing target and translates only keys that are missing or empty. Existing translations and extra keys stay untouched. If a target does not exist yet, Glotto translates it in full.
 
-Or via pnpx:
+If some entries still fail after retries, Glotto writes everything else, leaves those keys out (array items become `""`), and exits with code `1`. Run the same command again with `--incremental` to fill in only the gaps.
 
-```bash
-pnpx glotto
-```
+## Config file
 
-## Usage
-
-### Basic (default OpenAI)
-
-```bash
-glotto --key <openai-api-key> -i en.json -o tr.json -f English -t Turkish
-```
-
-### Gemini
-
-```bash
-glotto --key <gemini-api-key> -i en.json -o ar.json -f English -t Arabic -p gemini
-```
-
-### OpenAI / OpenAI-compatible endpoints
-
-```bash
-glotto --key <openai-api-key> -i en.json -o tr.json -f English -t Turkish -p openai
-```
-
-Custom base URL (e.g. self-hosted OpenAI-compatible server):
-
-```bash
-glotto --key <key> -i en.json -o tr.json -f English -t Turkish \
-  -p openai -m <model-name> --url <base-url>
-```
-
-### Anthropic (Claude)
-
-```bash
-glotto --key <anthropic-api-key> -i en.json -o tr.json -f English -t Turkish -p anthropic
-```
-
-### Override the model
-
-```bash
-glotto --key <key> -i en.json -o tr.json -f English -t Turkish -p openai -m <model-name>
-```
-
-### Multi-target — translate to several languages in one run
-
-Pass comma-separated values to `-t/--to` and `-o/--output`. The two lists must have the same length; entries pair up by index.
-
-```bash
-glotto --key <key> -i en.json -f English \
-  -t "Turkish,French,German" \
-  -o "tr.json,fr.json,de.json"
-```
-
-### Incremental — translate only missing keys
-
-When `--incremental` is set and the target file already exists, Glotto compares it against the source and only sends keys whose target value is missing or
-empty. The existing target structure is preserved; only the missing values are filled in.
-
-```bash
-glotto --key <key> -i en.json -o tr.json -f English -t Turkish --incremental
-```
-
-If the target file does not exist, Glotto falls back to a full translation.
-
-### Stats — see token usage
-
-`--stats` prints input/output token totals, call counts, batch sizes and per-target breakdown after the run finishes. Off by default.
-
-```bash
-glotto --key <key> -i en.json -o tr.json -f English -t Turkish --stats
-```
-
-### Config file (`glotto.config.json`)
-
-You can keep flags in a config file so you don't have to retype them. Glotto looks for `glotto.config.json` in the current working directory by default; pass
-`--config <path>` to use a custom location. CLI flags always override config values.
-
-Reference the JSON Schema for editor autocompletion and validation:
+Glotto reads `./glotto.config.json` when it exists; `--config <path>` points to another file. Paths in the config are relative to the config file, and CLI flags override config values.
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/ibodev1/glotto/main/schema/glotto.schema.json",
-  "provider": "openai",
-  "model": "gpt-4.1-mini",
+  "url": "http://localhost:11434/v1",
+  "model": "<model>",
   "input": "locales/en.json",
   "from": "English",
-  "to": ["Turkish", "French", "German"],
-  "output": ["locales/tr.json", "locales/fr.json", "locales/de.json"],
-  "incremental": true,
-  "stats": true
+  "to": ["Turkish", "German"],
+  "output": ["locales/tr.json", "locales/de.json"],
+  "incremental": true
 }
 ```
 
-With this config you only need to provide the API key on the CLI:
+With this file in place, running `glotto` on its own is enough. For cloud providers, use `envKey` instead of storing `key` in the file.
 
-```bash
-glotto --key <key>
-```
+## Options
 
-### Disable rate-limit delay and request timeout
-
-```bash
-glotto --key <key> -i en.json -o tr.json -f English -t Turkish --no-limit --no-timeout
-```
-
-### Tune batch size
-
-`--max-batch-size` is the maximum source bytes per batch, in KB. Smaller batches mean more requests but lower per-request token cost; larger batches mean fewer
-requests.
-
-```bash
-glotto --key <key> -i en.json -o tr.json -f English -t Turkish --max-batch-size 8
-```
-
-## Parameters
-
-| Flag               | Description                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------ |
-| `--key`            | API key for the chosen provider (required)                                           |
-| `-p`, `--provider` | `gemini` \| `openai` \| `anthropic` (default `openai`)                               |
-| `-m`, `--model`    | Model name (defaults: `gpt-4.1-mini`, `gemini-2.5-flash`, `claude-3-5-haiku-latest`) |
-| `-i`, `--input`    | Source JSON file (required)                                                          |
-| `-o`, `--output`   | Target JSON file path. Comma-separated for multi-target (required)                   |
-| `-f`, `--from`     | Source language                                                                      |
-| `-t`, `--to`       | Target language. Comma-separated for multi-target                                    |
-| `--url`            | Custom base URL for OpenAI/Anthropic                                                 |
-| `--config`         | Path to a config file (default: `./glotto.config.json` if present)                   |
-| `--stats`          | Print AI usage stats (tokens, calls, bytes) at the end                               |
-| `--incremental`    | Translate only missing/empty keys when the target already exists                     |
-| `--no-limit`       | Skip the inter-batch rate-limit delay                                                |
-| `--no-timeout`     | Disable request timeout                                                              |
-| `--max-batch-size` | Max source bytes per batch in KB (default 12)                                        |
-| `-h`, `--help`     | Help                                                                                 |
-| `-v`, `--version`  | Version                                                                              |
-
-## Config file fields
-
-`glotto.config.json` accepts the keys below. CLI flags override config values.
-
-| Key            | Type                                | Notes                                   |
-| -------------- | ----------------------------------- | --------------------------------------- |
-| `key`          | string                              | API key                                 |
-| `provider`     | `openai` \| `gemini` \| `anthropic` |                                         |
-| `model`        | string                              |                                         |
-| `input`        | string                              | Source JSON path                        |
-| `from`         | string                              | Source language                         |
-| `to`           | string \| string[]                  | Single target or array for multi-target |
-| `output`       | string \| string[]                  | Must match `to` length when array       |
-| `url`          | string                              | Custom base URL                         |
-| `noLimit`      | boolean                             |                                         |
-| `noTimeout`    | boolean                             |                                         |
-| `maxBatchSize` | integer (KB)                        |                                         |
-| `stats`        | boolean                             |                                         |
-| `incremental`  | boolean                             |                                         |
+| Flag               | Config         | Description                                                |
+| ------------------ | -------------- | ---------------------------------------------------------- |
+| `-m`, `--model`    | `model`        | Model name **(required)**                                  |
+| `-i`, `--input`    | `input`        | Source JSON file **(required)**                            |
+| `-o`, `--output`   | `output`       | Target file(s), comma-separated **(required)**             |
+| `-f`, `--from`     | `from`         | Source language **(required)**                             |
+| `-t`, `--to`       | `to`           | Target language(s), comma-separated **(required)**         |
+| `-u`, `--url`      | `url`          | OpenAI-compatible base URL (default: OpenAI)               |
+| `--key`            | `key`          | API key                                                    |
+| `--env-key`        | `envKey`       | Environment variable that holds the API key                |
+| `--temperature`    | `temperature`  | Sampling temperature, 0–2 (default: provider default)      |
+| `--max-batch-size` | `maxBatchSize` | Maximum payload per request in KB (default: 12)            |
+| `-c`, `--config`   |                | Config file path (default: `./glotto.config.json`)         |
+| `--incremental`    | `incremental`  | Translate only missing or empty keys                       |
+| `--stats`          | `stats`        | Print token usage and request stats                        |
+| `--no-limit`       | `noLimit`      | Disable the delay between requests                         |
+| `--no-timeout`     | `noTimeout`    | Disable the request timeout (useful for slow local models) |
+| `-h`, `--help`     |                | Show help                                                  |
+| `-v`, `--version`  |                | Show version                                               |
 
 ## Development
 
-Run from source:
-
 ```bash
-deno task cli --key <key> -i en.json -o tr.json -f English -t Turkish
+bun install
+bun test             # run the test suite
+bun run check        # type check
+bun run dev -- -h    # run from source
+bun run build        # bundle to dist/glotto.js
+bun run compile      # standalone binary
+bun run schema       # regenerate schema/glotto.schema.json from the config schema
 ```
-
-Build a single-file binary:
-
-```bash
-deno task build
-```
-
-Build npm package:
-
-```bash
-deno task build:npm
-```
-
-## Star us
-
-If Glotto saves you time, consider giving it a ⭐ on [GitHub](https://github.com/ibodev1/glotto) — it really helps the project reach more people.
 
 ## License
 
-MIT © 2026
+MIT © İbrahim Ödev. If Glotto saves you time, a ⭐ on [GitHub](https://github.com/ibodev1/glotto) helps.

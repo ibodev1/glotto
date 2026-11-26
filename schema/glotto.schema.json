@@ -1,87 +1,94 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/ibodev1/glotto/main/schema/glotto.schema.json",
-  "title": "Glotto config",
-  "description": "Configuration for the Glotto AI translator. CLI flags override values defined here.",
   "type": "object",
-  "additionalProperties": false,
   "properties": {
     "$schema": {
-      "type": "string",
-      "description": "JSON Schema reference for editor autocomplete."
-    },
-    "key": {
-      "type": "string",
-      "description": "API key for the AI provider."
-    },
-    "provider": {
-      "type": "string",
-      "enum": ["openai", "gemini", "anthropic"],
-      "description": "AI translation provider."
+      "description": "JSON Schema reference for editor support.",
+      "type": "string"
     },
     "model": {
+      "description": "Model name sent to the API.",
       "type": "string",
-      "description": "Model name for the selected provider."
+      "minLength": 1
+    },
+    "url": {
+      "description": "OpenAI-compatible base URL. Defaults to https://api.openai.com/v1.",
+      "type": "string",
+      "format": "uri"
+    },
+    "key": {
+      "description": "API key. Prefer envKey to keep secrets out of config files.",
+      "type": "string",
+      "minLength": 1
+    },
+    "envKey": {
+      "description": "Environment variable that holds the API key. .env in the working directory is loaded automatically.",
+      "type": "string",
+      "minLength": 1
     },
     "input": {
+      "description": "Source JSON file, relative to this config file.",
       "type": "string",
-      "description": "Path to source JSON file."
+      "minLength": 1
     },
     "output": {
-      "description": "Single target file path or array of paths (one per target language).",
-      "oneOf": [
-        { "type": "string" },
+      "description": "Target JSON file(s), relative to this config file. One per target language.",
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
         {
           "type": "array",
-          "items": { "type": "string" },
+          "items": { "type": "string", "minLength": 1 },
           "minItems": 1
         }
       ]
     },
     "from": {
+      "description": "Source language.",
       "type": "string",
-      "description": "Source language name."
+      "minLength": 1
     },
     "to": {
-      "description": "Target language name or array of names. Length must match output array.",
-      "oneOf": [
-        { "type": "string" },
+      "description": "Target language(s). Must match the number of outputs.",
+      "anyOf": [
+        { "type": "string", "minLength": 1 },
         {
           "type": "array",
-          "items": { "type": "string" },
+          "items": { "type": "string", "minLength": 1 },
           "minItems": 1
         }
       ]
     },
-    "url": {
-      "type": "string",
-      "description": "Custom base URL for OpenAI/Anthropic providers."
-    },
-    "noLimit": {
-      "type": "boolean",
-      "description": "Disable inter-batch rate-limit delay.",
-      "default": false
-    },
-    "noTimeout": {
-      "type": "boolean",
-      "description": "Disable request timeout.",
-      "default": false
+    "temperature": {
+      "description": "Sampling temperature. Omitted from requests when not set.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 2
     },
     "maxBatchSize": {
+      "description": "Maximum payload per request in KB. Defaults to 12.",
       "type": "integer",
-      "minimum": 1,
-      "description": "Maximum source size per batch in KB.",
-      "default": 12
-    },
-    "stats": {
-      "type": "boolean",
-      "description": "Print AI usage statistics at the end of the run.",
-      "default": false
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
     },
     "incremental": {
-      "type": "boolean",
-      "description": "Translate only missing or empty keys when target file already exists.",
-      "default": false
+      "description": "Translate only keys that are missing or empty in existing targets.",
+      "type": "boolean"
+    },
+    "stats": {
+      "description": "Print token usage and request stats.",
+      "type": "boolean"
+    },
+    "noLimit": {
+      "description": "Disable the delay between requests.",
+      "type": "boolean"
+    },
+    "noTimeout": {
+      "description": "Disable the request timeout.",
+      "type": "boolean"
     }
-  }
+  },
+  "additionalProperties": false,
+  "$id": "https://raw.githubusercontent.com/ibodev1/glotto/main/schema/glotto.schema.json",
+  "title": "Glotto config",
+  "description": "Configuration for the Glotto CLI. Command-line flags override these values."
 }

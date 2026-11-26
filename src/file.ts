@@ -1,35 +1,33 @@
-import { join } from '@std/path';
-import type { JsonValue } from './types.ts';
+import type { JsonValue } from "./types.ts";
+import { errorMessage } from "./utils.ts";
 
-export function resolvePath(...paths: string[]): string {
-  return join(Deno.cwd(), ...paths);
-}
+const BYTE_ORDER_MARK = /^\uFEFF/;
 
-export async function getImportJson<T = JsonValue>(input: string): Promise<T> {
-  const filePath = resolvePath(input);
-  const fileContent = await Deno.readTextFile(filePath);
-  if (typeof fileContent !== 'string' || fileContent.trim() === '') {
-    throw new Error('No Content!');
-  }
-  return JSON.parse(fileContent);
-}
-
-export async function writeOutput(outputPath: string, content: string): Promise<void> {
-  await Deno.writeTextFile(outputPath, content, { create: true });
-}
-
-export async function readJsonIfExists<T = JsonValue>(path: string): Promise<T | null> {
-  let raw: string;
+export function parseJson(text: string, source: string): JsonValue {
   try {
-    raw = await Deno.readTextFile(path);
+    const value: JsonValue = JSON.parse(text.replace(BYTE_ORDER_MARK, ""));
+    return value;
   } catch (error) {
-    if (error instanceof Deno.errors.NotFound) {
-      return null;
-    }
-    throw error;
+    throw new Error(`Invalid JSON in ${source}: ${errorMessage(error)}`);
   }
-  if (raw.trim() === '') {
+}
+
+export async function readJsonFile(path: string): Promise<JsonValue | null> {
+  const file = Bun.file(path);
+  const exists = await file.exists();
+  if (!exists) {
     return null;
   }
-  return JSON.parse(raw);
+  const text = await file.text();
+  if (text.trim() === "") {
+    return null;
+  }
+  return parseJson(text, path);
+}
+
+export async function writeJsonFile(
+  path: string,
+  value: JsonValue,
+): Promise<void> {
+  await Bun.write(path, `${JSON.stringify(value, null, 2)}\n`);
 }

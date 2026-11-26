@@ -1,0 +1,61 @@
+{
+  "name": "glotto",
+  "version": "4.0.0",
+  "description": "AI-powered i18n JSON translator for any OpenAI-compatible API, cloud or local.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Ibrahim Odev <me@ibrahimo.dev>",
+  "homepage": "https://github.com/ibodev1/glotto#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibodev1/glotto.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ibodev1/glotto/issues"
+  },
+  "keywords": [
+    "i18n",
+    "l10n",
+    "localization",
+    "translation",
+    "translator",
+    "json",
+    "ai",
+    "llm",
+    "openai",
+    "ollama",
+    "cli",
+    "bun"
+  ],
+  "bin": {
+    "glotto": "dist/glotto.js"
+  },
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "engines": {
+    "bun": ">=1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "build": "bun build src/cli.ts --target=bun --packages=external --minify --outfile=dist/glotto.js",
+    "compile": "bun build src/cli.ts --compile --minify --outfile=glotto",
+    "schema": "bun run scripts/generate-schema.ts",
+    "check": "tsc --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run check && bun test && bun run build"
+  },
+  "dependencies": {
+    "openai": "^7.65.0",
+    "ora": "^10.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.5",
+    "typescript": "^7.0.2"
+  }
+}
